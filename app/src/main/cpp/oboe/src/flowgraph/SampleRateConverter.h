@@ -50,7 +50,7 @@ namespace FLOWGRAPH_OUTER_NAMESPACE::flowgraph {
 
         resampler::MultiChannelResampler &mResampler;
 
-        int32_t mInputCursor = 0;         // offset into the input port buffer
+        int32_t mInputCursor = 0;         // fileOffset into the input port buffer
         int32_t mNumValidInputFrames = 0; // number of valid frames currently in the input port buffer
         // We need our own callCount for upstream calls because calls occur at a different rate.
         // This means we cannot have cyclic graphs or merges that contain an SRC.

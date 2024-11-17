@@ -5,7 +5,15 @@ set(OBOE_DIR ${CMAKE_CURRENT_LIST_DIR}/oboe)
 add_subdirectory(${OBOE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/oboe-bin)
 
 set(APP_SOURCES
+        BufferInfo.h
+        log.h
         native-lib.cpp
+        reader.h
+        SafeQueue.cpp
+        SafeQueue.h
+        SyncPalyerJNI.cpp
+        SyncPlayer.cpp
+        SyncPlayer.h
 )
 
 include_directories(
@@ -17,7 +25,6 @@ add_library(syncPlayer SHARED
         ${APP_SOURCES}
 )
 
-target_compile_options(syncPlayer PRIVATE -Wall -Werror "$<$<CONFIG:RELEASE>:-Ofast>")
 
 target_link_libraries(syncPlayer
         oboe
