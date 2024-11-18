@@ -8,6 +8,6 @@ fun debug(text: Any?) {
     Log.d(DEBUG_TAG, text.toString())
 }
 
-fun Any?.debug(text: String = "") {
-    Log.d(DEBUG_TAG, "$text: $this")
+fun error(text: Any?) {
+    Log.e(DEBUG_TAG, text.toString())
 }
