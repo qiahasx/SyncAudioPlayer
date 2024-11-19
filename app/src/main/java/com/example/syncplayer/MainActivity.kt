@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.syncplayer.audio.Decoder
 import com.example.syncplayer.audio.PCMPlayer
 import com.example.syncplayer.databinding.ActivityMainBinding
+import com.example.syncplayer.util.debug
 import com.example.syncplayer.util.launchIO
 import java.io.File
 
@@ -25,36 +26,17 @@ class MainActivity : ComponentActivity() {
             if (it.resultCode == RESULT_OK) {
                 val uri =
                     it.data?.data
-                        ?: return@registerForActivityResult com.example.syncplayer.debug("uri is null")
+                        ?: return@registerForActivityResult debug("uri is null")
                 val file = File(getExternalFilesDir("picked"), "${System.currentTimeMillis()}.m4a")
                 file.outputStream().use {
                     contentResolver.openInputStream(uri)?.copyTo(it)
                 }
                 pcm = File(getExternalFilesDir("pcm"), "${System.currentTimeMillis()}.pcm")
                 lifecycleScope.launchIO {
-                    Decoder(file.absolutePath).decodeToPCMFile(pcm.absolutePath)
+                    val decoder = Decoder(file.absolutePath)
+                    decoder.start()
+                    PCMPlayer(lifecycleScope, pcm).play(decoder.afterDecodeQueue)
                 }
-//                AudioDecoder(lifecycleScope, file.absolutePath).run {
-//                    val start = System.currentTimeMillis()
-//                    debug("decoder $start")
-//                    start()
-//                    lifecycleScope.launchIO {
-//                        pcm.outputStream().use { ops ->
-//                            val bytes = ByteArray(AudioDecoder.BUFFER_SIZE)
-//                            while (true) {
-//                                val consume = afterDecodeQueue.consume() ?: return@launchIO
-//                                consume.buffer.get(bytes, consume.offset, consume.size)
-//                                ops.write(bytes)
-//                                if (consume.flags == 4) break
-//                            }
-//                        }
-//                        debug("decoder end${System.currentTimeMillis() - start} fileLength: ${pcm.length()}")
-//                    }
-//                }
-//                debug("get picked ${file.absolutePath}")
-//                player.setData(file.absolutePath)
-//                binding.btnAction.isEnabled = true
-//                binding.btnPickFile.isEnabled = false
             }
         }
 
@@ -90,8 +72,8 @@ class MainActivity : ComponentActivity() {
                     cornerRadius = layoutParams.height / 2.0f
                 }
             setOnClickListener {
-                val pcmPlayer = PCMPlayer(lifecycleScope, pcm)
-                pcmPlayer.play()
+//                val pcmPlayer = PCMPlayer(lifecycleScope, pcm)
+//                pcmPlayer.play(decoder.afterDecodeQueue)
             }
             isEnabled = false
         }

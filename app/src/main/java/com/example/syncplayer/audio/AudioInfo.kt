@@ -3,7 +3,6 @@ package com.example.syncplayer.audio
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
-import com.example.syncplayer.debug
 import java.io.File
 
 data class AudioInfo(
@@ -48,8 +47,6 @@ data class AudioInfo(
                 )
             format.setInteger(MediaFormat.KEY_BIT_RATE, audioInfo.bitRate)
             format.setLong(MediaFormat.KEY_DURATION, audioInfo.duration)
-            debug("fomat: $format")
-            debug("audiofo: ${audioInfo.format}")
             configure(audioInfo.format, null, null, 0)
         }
 

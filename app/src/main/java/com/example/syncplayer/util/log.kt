@@ -1,4 +1,4 @@
-package com.example.syncplayer
+package com.example.syncplayer.util
 
 import android.util.Log
 

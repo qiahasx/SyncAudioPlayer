@@ -1,11 +1,10 @@
 package com.example.syncplayer.audio
 
+import BlockingQueueWithLocks
 import android.media.MediaCodec
 import android.media.MediaCodec.Callback
 import android.media.MediaExtractor
 import android.media.MediaFormat
-import com.example.syncplayer.debug
-import java.io.File
 
 class Decoder(
     filePath: String,
@@ -18,8 +17,8 @@ class Decoder(
     val duration: Long
     private val decoder: MediaCodec
     private var isAllAudioFed = false
-    private var isDecodeDone = false
     private val extractor = MediaExtractor()
+    val afterDecodeQueue = BlockingQueueWithLocks<BytesInfo>(BUFFER_MAX)
 
     init {
         extractor.setDataSource(filePath)
@@ -48,9 +47,7 @@ class Decoder(
         }
     }
 
-    fun decodeToPCMFile(pcmFilePath: String) {
-        val ops = File(pcmFilePath).outputStream()
-        val start = System.currentTimeMillis()
+    fun start() {
         decoder.setCallback(
             object : Callback() {
                 override fun onInputBufferAvailable(
@@ -80,14 +77,18 @@ class Decoder(
                     info: MediaCodec.BufferInfo,
                 ) {
                     val byteBuffer = decoder.getOutputBuffer(index) ?: return
-                    val bytes = ByteArray(byteBuffer.remaining())
+                    val bytes = ByteArray(info.offset + info.size)
                     byteBuffer.get(bytes, info.offset, info.size)
-                    ops.write(bytes)
+                    val bytesInfo =
+                        BytesInfo(
+                            bytes,
+                            info.offset,
+                            info.size,
+                            info.presentationTimeUs,
+                            info.flags,
+                        )
+                    afterDecodeQueue.produce(bytesInfo)
                     decoder.releaseOutputBuffer(index, false)
-                    if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        isDecodeDone = true
-                        debug("success: ${System.currentTimeMillis() - start}")
-                    }
                 }
 
                 override fun onError(
@@ -104,5 +105,9 @@ class Decoder(
             },
         )
         decoder.start()
+    }
+
+    companion object {
+        const val BUFFER_MAX = 5
     }
 }

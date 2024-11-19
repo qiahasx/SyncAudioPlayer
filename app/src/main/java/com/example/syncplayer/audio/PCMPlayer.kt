@@ -1,23 +1,23 @@
 package com.example.syncplayer.audio
 
+import BlockingQueueWithLocks
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import com.example.syncplayer.util.debug
+import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import java.io.File
-import java.io.FileInputStream
 
 class PCMPlayer(
     private val scope: CoroutineScope,
     private val file: File,
 ) {
-    private lateinit var fis: FileInputStream
     private val audioTrack: AudioTrack
     private val bufferSize: Int =
         AudioTrack.getMinBufferSize(
-            44100,
+            48000,
             AudioFormat.CHANNEL_OUT_STEREO,
             AudioFormat.ENCODING_PCM_16BIT,
         )
@@ -29,7 +29,7 @@ class PCMPlayer(
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
         val format =
             AudioFormat.Builder()
-                .setSampleRate(44100)
+                .setSampleRate(48000)
                 .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                 .build()
@@ -43,18 +43,19 @@ class PCMPlayer(
             )
     }
 
-    fun play() {
-        scope.launch {
+    fun play(afterDecodeQueue: BlockingQueueWithLocks<BytesInfo>) {
+        scope.launchIO {
+            val start = System.currentTimeMillis()
             audioTrack.play()
-            val byteArray = ByteArray(bufferSize)
-            fis = file.inputStream()
             while (true) {
-                val readSize = fis.read(byteArray)
-                if (readSize <= 0) {
+                val bytesInfo =
+                    afterDecodeQueue.consume() ?: throw IllegalStateException("怎么拿不到了")
+                if (bytesInfo.flags == 4) {
                     release()
+                    debug("结束了，播放了 ${System.currentTimeMillis() - start}")
                     break
                 }
-                audioTrack.write(byteArray, 0, readSize)
+                audioTrack.write(bytesInfo.bytes, bytesInfo.offset, bytesInfo.size)
             }
         }
     }
@@ -62,6 +63,5 @@ class PCMPlayer(
     private fun release() {
         audioTrack.stop()
         audioTrack.release()
-        fis.close()
     }
 }
