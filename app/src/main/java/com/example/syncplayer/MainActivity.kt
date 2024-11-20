@@ -7,18 +7,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.lifecycleScope
-import com.example.syncplayer.audio.Decoder
-import com.example.syncplayer.audio.PCMPlayer
+import com.example.syncplayer.audio.SyncPlayer
 import com.example.syncplayer.databinding.ActivityMainBinding
 import com.example.syncplayer.util.debug
-import com.example.syncplayer.util.launchIO
 import java.io.File
 
 class MainActivity : ComponentActivity() {
-    private val player by lazy {
-        SyncPlayer(lifecycleScope)
-    }
     private lateinit var pcm: File
 
     private val pickFile =
@@ -31,12 +25,9 @@ class MainActivity : ComponentActivity() {
                 file.outputStream().use {
                     contentResolver.openInputStream(uri)?.copyTo(it)
                 }
-                pcm = File(getExternalFilesDir("pcm"), "${System.currentTimeMillis()}.pcm")
-                lifecycleScope.launchIO {
-                    val decoder = Decoder(file.absolutePath)
-                    decoder.start()
-                    PCMPlayer(lifecycleScope, pcm).play(decoder.afterDecodeQueue)
-                }
+                val syncPlayer = SyncPlayer()
+                syncPlayer.setDataSource(file.absolutePath)
+                syncPlayer.start()
             }
         }
 
@@ -47,6 +38,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         binding.btnPickFile.run {
             background =
                 GradientDrawable().apply {
@@ -65,6 +57,7 @@ class MainActivity : ComponentActivity() {
                 pickFile.launch(intent)
             }
         }
+
         binding.btnAction.run {
             background =
                 GradientDrawable().apply {
@@ -76,19 +69,6 @@ class MainActivity : ComponentActivity() {
 //                pcmPlayer.play(decoder.afterDecodeQueue)
             }
             isEnabled = false
-        }
-    }
-
-    /**
-     * A native method that is implemented by the 'syncplayer' native library,
-     * which is packaged with this application.
-     */
-    external fun stringFromJNI(): String
-
-    companion object {
-        // Used to load the 'syncplayer' library on application startup.
-        init {
-            System.loadLibrary("syncPlayer")
         }
     }
 }
