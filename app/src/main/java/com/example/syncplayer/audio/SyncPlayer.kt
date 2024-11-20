@@ -5,7 +5,6 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import androidx.collection.ArrayMap
-import com.example.syncplayer.util.debug
 import kotlin.concurrent.thread
 
 class SyncPlayer() {
@@ -45,7 +44,6 @@ class SyncPlayer() {
         val sampleRate = infos.maxOf { it.sampleRate }
         val channelCount = infos.maxOf { it.channelCount }
         val channelMask = coverChannelCountToChannelMask(channelCount)
-        debug("channel count: $channelCount channel mask: $channelMask")
         val audioAttributes =
             AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)

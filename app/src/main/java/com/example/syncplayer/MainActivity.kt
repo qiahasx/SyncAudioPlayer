@@ -13,8 +13,6 @@ import com.example.syncplayer.util.debug
 import java.io.File
 
 class MainActivity : ComponentActivity() {
-    private lateinit var pcm: File
-
     private val pickFile =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {

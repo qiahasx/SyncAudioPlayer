@@ -3,7 +3,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
-class BlockingQueueWithLocks<T>(private val capacity: Int = 50) {
+class BlockingQueueWithLocks<T>(private val capacity: Int) {
     private val queue = ConcurrentLinkedQueue<T>()
     private val lock = ReentrantLock()
     private val notEmpty: Condition = lock.newCondition()
