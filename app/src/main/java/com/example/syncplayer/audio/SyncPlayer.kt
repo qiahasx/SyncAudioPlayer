@@ -34,7 +34,7 @@ class SyncPlayer() {
                     audioTrack.stop()
                     break
                 }
-                audioTrack.write(bytesInfo.bytes, bytesInfo.offset, bytesInfo.size)
+                audioTrack.write(bytesInfo.shorts, bytesInfo.offset, bytesInfo.size)
             }
         }
     }
