@@ -67,5 +67,16 @@ class MainActivity : ComponentActivity() {
                 syncPlayer.start()
             }
         }
+
+        binding.btnSeek.run {
+            background =
+                GradientDrawable().apply {
+                    setColor(Color.GREEN)
+                    cornerRadius = layoutParams.height / 2.0f
+                }
+            setOnClickListener {
+                syncPlayer.seekTo(60 * 1000 * 1000)
+            }
+        }
     }
 }

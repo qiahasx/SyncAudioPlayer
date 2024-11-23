@@ -33,6 +33,12 @@ class AudioMixer(private val scope: CoroutineScope) {
         }
     }
 
+    fun seekTo(timeUs: Long) {
+        map.values.forEach {
+            it.seekTo(timeUs)
+        }
+    }
+
     // TODO MediaCodec输出的buffer的大小在网上没能找到控制的方式，也许不一样，不应该直接相加
     // TODO 不同音轨的声道数和采样率可能不同直接相加pcm数据时间对不上，需转换
     private suspend fun startInner() {
@@ -59,7 +65,7 @@ class AudioMixer(private val scope: CoroutineScope) {
     private fun FloatArray.addShortInfo(info: ShortsInfo) {
         val offset = info.offset
         for (i in offset until offset + info.size) {
-            this[i - offset] += info.shorts[i] / MAX_SHORT_F
+            this[i - offset] += info.shorts[i] / MAX_SHORT_F / 3
         }
     }
 

@@ -28,6 +28,10 @@ class SyncPlayer(private val scope: CoroutineScope) {
         }
     }
 
+    fun seekTo(timeUs: Long) {
+        mix.seekTo(timeUs)
+    }
+
     private suspend fun startInner() {
         while (true) {
             val bytesInfo = mix.queue.consume()

@@ -5,6 +5,7 @@ import android.media.MediaCodec.BufferInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import com.example.syncplayer.queue.BlockQueue
+import com.example.syncplayer.util.debug
 import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.CoroutineScope
 import java.nio.ByteBuffer
@@ -51,6 +52,10 @@ class Decoder(
         startInner()
     }
 
+    fun seekTo(timeUs: Long) {
+        extractor.seekTo(timeUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+    }
+
     private fun startInner() {
         scope.launchIO {
             while (true) {
@@ -81,6 +86,7 @@ class Decoder(
                     val byteBuffer = decoder.getOutputBuffer(index) ?: ByteBuffer.allocate(0)
                     queue.produce(ShortsInfo.createShortsInfo(byteBuffer, info))
                     decoder.releaseOutputBuffer(index, false)
+                    debug(info.flags)
                 }
             }
         }
