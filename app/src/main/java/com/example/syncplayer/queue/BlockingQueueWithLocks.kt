@@ -1,9 +1,8 @@
-import com.example.syncplayer.util.debug
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
-class BlockingQueueWithLocks<T>(private val capacity: Int) {
+class BlockingQueueWithLocks<T>(private val capacity: Int, val debug: Boolean = false) {
     private val queue = ConcurrentLinkedQueue<T>()
     private val lock = ReentrantLock()
     private val notEmpty: Condition = lock.newCondition()
@@ -23,15 +22,14 @@ class BlockingQueueWithLocks<T>(private val capacity: Int) {
         }
     }
 
-    @Throws(InterruptedException::class)
-    fun consume(): T? {
+    @Throws(NoSuchElementException::class)
+    fun consume(): T {
         lock.lock()
         try {
             while (queue.isEmpty()) {
-                debug("被堵塞了")
                 notEmpty.await()
             }
-            val item = queue.poll()
+            val item = queue.poll() ?: throw NoSuchElementException("队列为空")
             notFull.signal()
             return item
         } finally {

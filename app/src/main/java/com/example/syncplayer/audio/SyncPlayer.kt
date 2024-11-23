@@ -4,45 +4,44 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
-import androidx.collection.ArrayMap
 import kotlin.concurrent.thread
 
-class SyncPlayer() {
-    private val map = ArrayMap<Int, Decoder>()
-    private var cnt = 0
+class SyncPlayer {
+    private val mix = AudioMixer()
     private var isPlaying = false
     private lateinit var audioTrack: AudioTrack
 
     @Throws(IllegalStateException::class)
     fun setDataSource(path: String): Int {
         if (isPlaying) throw IllegalStateException("Cannot set data source on playing")
-        val decoder = Decoder(path)
-        map[++cnt] = decoder
-        return cnt
+        return mix.addAudioSource(path)
     }
 
     fun start() {
-        if (isPlaying || map.isEmpty) return
+        if (isPlaying) return
         audioTrack = initAudioTrack()
         thread {
-            map.values.forEach { it.start() }
+            mix.start()
             audioTrack.play()
-            val decodeQueue = map.iterator().next().value.afterDecodeQueue
             while (true) {
-                val bytesInfo = decodeQueue.consume()!!
+                val bytesInfo = mix.queue.consume()
                 if (bytesInfo.flags == 4) {
                     audioTrack.stop()
                     break
                 }
-                audioTrack.write(bytesInfo.shorts, bytesInfo.offset, bytesInfo.size)
+                audioTrack.write(
+                    bytesInfo.floats,
+                    bytesInfo.offset,
+                    bytesInfo.size,
+                    AudioTrack.WRITE_BLOCKING,
+                )
             }
         }
     }
 
     private fun initAudioTrack(): AudioTrack {
-        val infos = map.values.map { it.audioInfo }
-        val sampleRate = infos.maxOf { it.sampleRate }
-        val channelCount = infos.maxOf { it.channelCount }
+        val sampleRate = mix.getSampleRate()
+        val channelCount = mix.getChannelCount()
         val channelMask = coverChannelCountToChannelMask(channelCount)
         val audioAttributes =
             AudioAttributes.Builder()
@@ -53,10 +52,10 @@ class SyncPlayer() {
             AudioFormat.Builder()
                 .setSampleRate(sampleRate)
                 .setChannelMask(channelMask)
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                 .build()
         val bufferSize: Int =
-            AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_PCM_16BIT)
+            AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_PCM_FLOAT)
         return AudioTrack(
             audioAttributes,
             format,

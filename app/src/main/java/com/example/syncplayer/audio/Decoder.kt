@@ -13,7 +13,7 @@ class Decoder(
     private var trackIndex: Int = -1
     private val decoder: MediaCodec
     private val extractor = MediaExtractor()
-    val afterDecodeQueue = BlockingQueueWithLocks<ShortsInfo>(BUFFER_MAX)
+    private val afterDecodeQueue = BlockingQueueWithLocks<ShortsInfo>(BUFFER_MAX)
 
     init {
         extractor.setDataSource(filePath)
@@ -43,6 +43,8 @@ class Decoder(
         decoder.start()
     }
 
+    fun consume(): ShortsInfo = afterDecodeQueue.consume()
+
     private fun createCallBack() =
         object : Callback() {
             override fun onInputBufferAvailable(
@@ -66,11 +68,6 @@ class Decoder(
             ) {
                 val byteBuffer = decoder.getOutputBuffer(index) ?: return
                 afterDecodeQueue.produce(ShortsInfo.createShortsInfo(byteBuffer, info))
-//                val bytes = ByteArray(info.offset + info.size)
-//                byteBuffer.get(bytes, info.offset, info.size)
-//                val bytesInfo =
-//                    BytesInfo(bytes, info.offset, info.size, info.presentationTimeUs, info.flags)
-//                afterDecodeQueue.produce(bytesInfo)
                 decoder.releaseOutputBuffer(index, false)
             }
 

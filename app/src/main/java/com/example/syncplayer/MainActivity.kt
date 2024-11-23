@@ -13,6 +13,8 @@ import com.example.syncplayer.util.debug
 import java.io.File
 
 class MainActivity : ComponentActivity() {
+    private val syncPlayer = SyncPlayer()
+
     private val pickFile =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {
@@ -23,9 +25,7 @@ class MainActivity : ComponentActivity() {
                 file.outputStream().use {
                     contentResolver.openInputStream(uri)?.copyTo(it)
                 }
-                val syncPlayer = SyncPlayer()
                 syncPlayer.setDataSource(file.absolutePath)
-                syncPlayer.start()
             }
         }
 
@@ -63,10 +63,8 @@ class MainActivity : ComponentActivity() {
                     cornerRadius = layoutParams.height / 2.0f
                 }
             setOnClickListener {
-//                val pcmPlayer = PCMPlayer(lifecycleScope, pcm)
-//                pcmPlayer.play(decoder.afterDecodeQueue)
+                syncPlayer.start()
             }
-            isEnabled = false
         }
     }
 }
