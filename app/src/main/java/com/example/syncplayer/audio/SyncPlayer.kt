@@ -4,10 +4,11 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
-import kotlin.concurrent.thread
+import com.example.syncplayer.util.launchIO
+import kotlinx.coroutines.CoroutineScope
 
-class SyncPlayer {
-    private val mix = AudioMixer()
+class SyncPlayer(private val scope: CoroutineScope) {
+    private val mix = AudioMixer(scope)
     private var isPlaying = false
     private lateinit var audioTrack: AudioTrack
 
@@ -20,22 +21,26 @@ class SyncPlayer {
     fun start() {
         if (isPlaying) return
         audioTrack = initAudioTrack()
-        thread {
-            mix.start()
-            audioTrack.play()
-            while (true) {
-                val bytesInfo = mix.queue.consume()
-                if (bytesInfo.flags == 4) {
-                    audioTrack.stop()
-                    break
-                }
-                audioTrack.write(
-                    bytesInfo.floats,
-                    bytesInfo.offset,
-                    bytesInfo.size,
-                    AudioTrack.WRITE_BLOCKING,
-                )
+        mix.start()
+        audioTrack.play()
+        scope.launchIO {
+            startInner()
+        }
+    }
+
+    private suspend fun startInner() {
+        while (true) {
+            val bytesInfo = mix.queue.consume()
+            if (bytesInfo.flags == 4) {
+                audioTrack.stop()
+                break
             }
+            audioTrack.write(
+                bytesInfo.floats,
+                bytesInfo.offset,
+                bytesInfo.size,
+                AudioTrack.WRITE_BLOCKING,
+            )
         }
     }
 
