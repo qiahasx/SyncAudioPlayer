@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.syncplayer.audio.SyncPlayer
 import com.example.syncplayer.databinding.ActivityMainBinding
 import com.example.syncplayer.util.debug
+import com.example.syncplayer.util.launchIO
 import java.io.File
 
 class MainActivity : ComponentActivity() {
@@ -75,7 +76,9 @@ class MainActivity : ComponentActivity() {
                     cornerRadius = layoutParams.height / 2.0f
                 }
             setOnClickListener {
-                syncPlayer.seekTo(60 * 1000 * 1000)
+                lifecycleScope.launchIO {
+                    syncPlayer.seekTo(15 * 1000 * 1000)
+                }
             }
         }
     }

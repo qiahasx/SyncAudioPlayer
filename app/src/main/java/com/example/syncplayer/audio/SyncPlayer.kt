@@ -5,6 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import com.example.syncplayer.util.launchIO
+import com.example.syncplayer.util.withIO
 import kotlinx.coroutines.CoroutineScope
 
 class SyncPlayer(private val scope: CoroutineScope) {
@@ -28,9 +29,7 @@ class SyncPlayer(private val scope: CoroutineScope) {
         }
     }
 
-    fun seekTo(timeUs: Long) {
-        mix.seekTo(timeUs)
-    }
+    suspend fun seekTo(timeUs: Long) = withIO { mix.seekTo(timeUs) }
 
     private suspend fun startInner() {
         while (true) {

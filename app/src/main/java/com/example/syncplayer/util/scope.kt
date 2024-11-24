@@ -8,11 +8,11 @@ import kotlinx.coroutines.withContext
 
 fun CoroutineScope.launchIO(
     consumeException: Boolean = true,
-    block: suspend () -> Unit,
+    block: suspend CoroutineScope.() -> Unit,
 ) = if (consumeException) {
-    launch(Dispatchers.IO + createExceptionHandler()) { block.invoke() }
+    launch(Dispatchers.IO + createExceptionHandler()) { block.invoke(this) }
 } else {
-    launch(Dispatchers.IO) { block.invoke() }
+    launch(Dispatchers.IO) { block.invoke(this) }
 }
 
 suspend fun withIO(block: suspend () -> Unit) =
