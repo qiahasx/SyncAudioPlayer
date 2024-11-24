@@ -20,9 +20,7 @@ class MainActivity : ComponentActivity() {
     private val pickFile =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {
-                val uri =
-                    it.data?.data
-                        ?: return@registerForActivityResult debug("uri is null")
+                val uri = it.data?.data ?: return@registerForActivityResult debug("uri is null")
                 val file = File(getExternalFilesDir("picked"), "${System.currentTimeMillis()}.m4a")
                 file.outputStream().use {
                     contentResolver.openInputStream(uri)?.copyTo(it)

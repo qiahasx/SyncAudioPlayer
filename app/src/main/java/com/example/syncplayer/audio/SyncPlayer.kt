@@ -38,12 +38,7 @@ class SyncPlayer(private val scope: CoroutineScope) {
                 audioTrack.stop()
                 break
             }
-            audioTrack.write(
-                bytesInfo.floats,
-                bytesInfo.offset,
-                bytesInfo.size,
-                AudioTrack.WRITE_BLOCKING,
-            )
+            audioTrack.write(bytesInfo.floats, bytesInfo.offset, bytesInfo.size, AudioTrack.WRITE_BLOCKING)
         }
     }
 
@@ -64,13 +59,7 @@ class SyncPlayer(private val scope: CoroutineScope) {
                 .build()
         val bufferSize: Int =
             AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_PCM_FLOAT)
-        return AudioTrack(
-            audioAttributes,
-            format,
-            bufferSize,
-            AudioTrack.MODE_STREAM,
-            AudioManager.AUDIO_SESSION_ID_GENERATE,
-        )
+        return AudioTrack(audioAttributes, format, bufferSize, AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE)
     }
 
     private fun coverChannelCountToChannelMask(channelCount: Int) =

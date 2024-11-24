@@ -99,6 +99,6 @@ class Decoder(
         }
 
     companion object {
-        const val BUFFER_MAX = 8
+        const val BUFFER_MAX = 4
     }
 }

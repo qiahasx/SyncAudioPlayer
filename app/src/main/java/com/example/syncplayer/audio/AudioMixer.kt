@@ -2,7 +2,6 @@ package com.example.syncplayer.audio
 
 import androidx.collection.ArrayMap
 import com.example.syncplayer.queue.BlockQueue
-import com.example.syncplayer.util.debug
 import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -13,22 +12,22 @@ import kotlin.math.tanh
 class AudioMixer(private val scope: CoroutineScope) {
     val queue = BlockQueue<FloatsInfo>(4)
     private val mutex = Mutex()
-    private val map = ArrayMap<Int, Decoder>()
+    private val map = ArrayMap<Int, AudioCovert>()
     private var cnt = 0
 
     fun addAudioSource(path: String): Int {
-        map[++cnt] = Decoder(scope, path)
+        map[++cnt] = AudioCovert(Decoder(scope, path), BUFFER_SIZE)
         return cnt
     }
 
     fun getSampleRate(): Int {
         if (map.isEmpty) return -1
-        return map.values.maxOf { it.audioInfo.sampleRate }
+        return map.values.maxOf { it.decoder.audioInfo.sampleRate }
     }
 
     fun getChannelCount(): Int {
         if (map.isEmpty) return -1
-        return map.values.maxOf { it.audioInfo.channelCount }
+        return map.values.maxOf { it.decoder.audioInfo.channelCount }
     }
 
     fun start() {
@@ -42,31 +41,25 @@ class AudioMixer(private val scope: CoroutineScope) {
         mutex.lock()
         map.values.map {
             scope.async {
-                it.seekTo(timeUs)
+                it.clearCache()
+                it.decoder.seekTo(timeUs)
             }
         }.awaitAll()
         mutex.unlock()
     }
 
-    // TODO MediaCodec输出的buffer的大小在网上没能找到控制的方式，也许不一样，不应该直接相加
-    // TODO 不同音轨的声道数和采样率可能不同直接相加pcm数据时间对不上，需转换
+    // TODO 不同音轨的声道数和采样率可能不同直接相加pcm数据，时间对不上，需转换
     private suspend fun startInner() {
-        map.values.forEach { it.start() }
+        map.values.forEach { it.decoder.start() }
         while (true) {
             mutex.lock()
             val shortMap = ArrayMap<Int, ShortsInfo>()
             for ((id, decoder) in map.entries) {
-                shortMap[id] = decoder.consume()
+                shortMap[id] = decoder.getBuffer()
             }
             val firstInfo = shortMap.values.iterator().next()
             val length = firstInfo.size
             val floats = FloatArray(length)
-            val time = shortMap.map { it.value.sampleTime }
-            val a = time[0]
-            val any = time.any { it != a }
-            if (any) {
-                debug(time)
-            }
             shortMap.values.forEach { info ->
                 floats.addShortInfo(info)
             }
@@ -88,5 +81,6 @@ class AudioMixer(private val scope: CoroutineScope) {
 
     companion object {
         const val MAX_SHORT_F = Short.MAX_VALUE.toFloat()
+        const val BUFFER_SIZE = 256
     }
 }

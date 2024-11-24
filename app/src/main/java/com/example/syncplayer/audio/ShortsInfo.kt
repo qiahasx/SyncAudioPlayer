@@ -7,8 +7,8 @@ class ShortsInfo(
     val shorts: ShortArray,
     var offset: Int = 0,
     var size: Int = 0,
-    val sampleTime: Long = 0,
-    val flags: Int = 0,
+    var sampleTime: Long = 0,
+    var flags: Int = 0,
 ) {
     companion object {
         fun createShortsInfo(
