@@ -57,7 +57,7 @@ class Decoder(
     suspend fun seekTo(timeUs: Long) {
         extractorJob?.cancelAndJoin()
         decodeJob?.cancelAndJoin()
-        queue.init()
+        queue.clear()
         decoder.flush()
         extractor.seekTo(timeUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
         startInner()

@@ -10,17 +10,14 @@ import kotlinx.coroutines.CoroutineScope
 
 class SyncPlayer(private val scope: CoroutineScope) {
     private val mix = AudioMixer(scope)
-    private var isPlaying = false
     private lateinit var audioTrack: AudioTrack
 
     @Throws(IllegalStateException::class)
     fun setDataSource(path: String): Int {
-        if (isPlaying) throw IllegalStateException("Cannot set data source on playing")
         return mix.addAudioSource(path)
     }
 
     fun start() {
-        if (isPlaying) return
         audioTrack = initAudioTrack()
         mix.start()
         audioTrack.play()

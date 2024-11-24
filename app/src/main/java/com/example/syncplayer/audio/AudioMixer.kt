@@ -53,23 +53,27 @@ class AudioMixer(private val scope: CoroutineScope) {
         map.values.forEach { it.decoder.start() }
         while (true) {
             mutex.lock()
-            val shortMap = ArrayMap<Int, ShortsInfo>()
-            for ((id, decoder) in map.entries) {
-                shortMap[id] = decoder.getBuffer()
-            }
-            val firstInfo = shortMap.values.iterator().next()
-            val length = firstInfo.size
-            val floats = FloatArray(length)
-            shortMap.values.forEach { info ->
-                floats.addShortInfo(info)
-            }
-            for (i in floats.indices) {
-                // TODO 这个混音逻辑不行 后续做成可以由用户配置的
-                floats[i] = tanh(floats[i])
-            }
-            queue.produce(FloatsInfo(floats, 0, length, firstInfo.sampleTime, firstInfo.flags))
+            mix()
             mutex.unlock()
         }
+    }
+
+    private suspend fun mix() {
+        val shortMap = ArrayMap<Int, ShortsInfo>()
+        for ((id, decoder) in map.entries) {
+            shortMap[id] = decoder.getBuffer()
+        }
+        val firstInfo = shortMap.values.iterator().next()
+        val length = firstInfo.size
+        val floats = FloatArray(length)
+        shortMap.values.forEach { info ->
+            floats.addShortInfo(info)
+        }
+        for (i in floats.indices) {
+            // TODO 这个混音逻辑不行 后续做成可以由用户配置的
+            floats[i] = tanh(floats[i])
+        }
+        queue.produce(FloatsInfo(floats, 0, length, firstInfo.sampleTime, firstInfo.flags))
     }
 
     private fun FloatArray.addShortInfo(info: ShortsInfo) {
