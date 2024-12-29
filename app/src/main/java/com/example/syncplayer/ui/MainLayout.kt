@@ -45,7 +45,6 @@ import com.example.syncplayer.LocalPickFile
 import com.example.syncplayer.R
 import com.example.syncplayer.model.AudioItem
 import com.example.syncplayer.ui.theme.ComposeTheme
-import com.example.syncplayer.util.debug
 import com.example.syncplayer.viewModel.MainViewModel
 
 @Composable
@@ -99,7 +98,6 @@ fun ItemList(
 
     LaunchedEffect(viewModel) {
         viewModel.navigationEvent.collect { event ->
-            debug("Navigation event: $event")
             when (event) {
                 is MainViewModel.NavigationEvent.NavigateToNextScreen -> {
                     navController.navigate(Destinations.PLAY_ROUTE)
@@ -110,7 +108,6 @@ fun ItemList(
 
     LaunchedEffect(viewModel) {
         viewModel.snackbarMessage.collect { message ->
-            debug("message $message")
             snackbarHostState.showSnackbar(message)
         }
     }

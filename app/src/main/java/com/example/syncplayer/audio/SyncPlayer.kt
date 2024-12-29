@@ -8,7 +8,10 @@ import com.example.syncplayer.util.launchIO
 import com.example.syncplayer.util.withIO
 import kotlinx.coroutines.CoroutineScope
 
-class SyncPlayer(private val scope: CoroutineScope) {
+class SyncPlayer(
+    private val scope: CoroutineScope,
+    private val onProgress: (suspend (Long) -> Unit)? = null,
+) {
     private val mix = AudioMixer(scope)
     private lateinit var audioTrack: AudioTrack
 
@@ -23,6 +26,12 @@ class SyncPlayer(private val scope: CoroutineScope) {
         audioTrack.play()
         scope.launchIO {
             startInner()
+        }
+        val onProgress = onProgress ?: return
+        scope.launchIO {
+            mix.progress.collect {
+                onProgress.invoke(it)
+            }
         }
     }
 

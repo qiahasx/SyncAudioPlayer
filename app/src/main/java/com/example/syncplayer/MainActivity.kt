@@ -9,8 +9,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.lifecycle.lifecycleScope
-import com.example.syncplayer.audio.SyncPlayer
 import com.example.syncplayer.ui.NavGraph
 import com.example.syncplayer.util.debug
 import com.example.syncplayer.util.launchMain
@@ -21,7 +19,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 class MainActivity : ComponentActivity() {
-    private val syncPlayer = SyncPlayer(lifecycleScope)
     private val viewModel by viewModels<MainViewModel>()
 
     private val pickFile =

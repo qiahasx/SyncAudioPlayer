@@ -25,7 +25,7 @@ class MainViewModel : ViewModel() {
     private val _playProgress = MutableStateFlow(0f)
     val playProgress: StateFlow<Float> get() = _playProgress
 
-    private val _totalDuration = MutableStateFlow(60000f)
+    private val _totalDuration = MutableStateFlow(330 * 1000f)
     val totalDuration: StateFlow<Float> get() = _totalDuration
 
     private val _snackbarMessage = MutableSharedFlow<String>()
@@ -34,7 +34,7 @@ class MainViewModel : ViewModel() {
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> get() = _isPlaying
 
-    private val player by lazy { SyncPlayer(viewModelScope) }
+    private val player by lazy { SyncPlayer(viewModelScope) { _playProgress.emit(it / 1000f) } }
 
     init {
         updateItem()

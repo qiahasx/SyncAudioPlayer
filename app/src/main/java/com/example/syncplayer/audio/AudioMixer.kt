@@ -6,11 +6,12 @@ import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
-import kotlin.math.tanh
 
 class AudioMixer(private val scope: CoroutineScope) {
     val queue = BlockQueue<FloatsInfo>(BUFFER_NUM)
+    val progress = MutableStateFlow<Long>(0)
     private val mutex = Mutex()
     private val map = ArrayMap<Int, AudioCovert>()
     private var cnt = 0
@@ -65,6 +66,7 @@ class AudioMixer(private val scope: CoroutineScope) {
             shortMap[id] = decoder.getBuffer()
         }
         val firstInfo = shortMap.values.iterator().next()
+        progress.emit(firstInfo.sampleTime)
         val length = firstInfo.size
         val floats = FloatArray(length)
         shortMap.values.forEach { info ->
@@ -72,7 +74,7 @@ class AudioMixer(private val scope: CoroutineScope) {
         }
         for (i in floats.indices) {
             // TODO 这个混音逻辑不行 后续做成可以由用户配置的
-            floats[i] = tanh(floats[i])
+            floats[i] += floats[i]
         }
         queue.produce(FloatsInfo(floats, 0, length, firstInfo.sampleTime, firstInfo.flags))
     }

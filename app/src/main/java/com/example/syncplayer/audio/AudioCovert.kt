@@ -12,15 +12,17 @@ class AudioCovert(
     }
 
     suspend fun getBuffer(): ShortsInfo {
-        shortsInfo.flags = 0
-        shortsInfo.sampleTime = 0
         val shorts = ShortArray(bufferSize) { getNext(shortsInfo) }
-        return ShortsInfo(shorts, 0, bufferSize, 0L, shortsInfo.flags)
+        return ShortsInfo(shorts, 0, bufferSize, shortsInfo.sampleTime, shortsInfo.flags)
     }
 
     private suspend fun getNext(info: ShortsInfo): Short {
-        val bufferInfo = cache ?: audioDecoder.consume().also { cache = it }
-        info.flags = info.flags or bufferInfo.flags
+        val bufferInfo =
+            cache ?: audioDecoder.consume().also {
+                cache = it
+                info.sampleTime = it.sampleTime
+                info.flags = info.flags or it.flags
+            }
         if (bufferInfo.size == 0) {
             cache = null
             return getNext(info)
