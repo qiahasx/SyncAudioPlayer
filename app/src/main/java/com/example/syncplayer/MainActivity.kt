@@ -1,83 +1,72 @@
 package com.example.syncplayer
 
-import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.example.syncplayer.audio.SyncPlayer
-import com.example.syncplayer.databinding.ActivityMainBinding
+import com.example.syncplayer.ui.NavGraph
 import com.example.syncplayer.util.debug
-import com.example.syncplayer.util.launchIO
+import com.example.syncplayer.util.launchMain
+import com.example.syncplayer.viewModel.MainViewModel
+import com.example.syncplayer.viewModel.MainViewModel.Companion.AUDIO_PATH
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class MainActivity : ComponentActivity() {
     private val syncPlayer = SyncPlayer(lifecycleScope)
+    private val viewModel by viewModels<MainViewModel>()
 
     private val pickFile =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {
-                val uri = it.data?.data ?: return@registerForActivityResult debug("uri is null")
-                val file = File(getExternalFilesDir("picked"), "${System.currentTimeMillis()}.m4a")
-                file.outputStream().use {
-                    contentResolver.openInputStream(uri)?.copyTo(it)
+                launchMain {
+                    val uri = it.data?.data ?: return@launchMain debug("uri is null")
+                    val fileName = getFileNameFromUri(uri) ?: return@launchMain debug("fileName is null")
+                    val file = File(getExternalFilesDir(AUDIO_PATH), fileName)
+                    file.outputStream().use { outputStream ->
+                        contentResolver.openInputStream(uri)?.copyTo(outputStream)
+                    }
+                    viewModel.updateItem()
                 }
-                syncPlayer.setDataSource(file.absolutePath)
             }
         }
-
-    private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        binding.btnPickFile.run {
-            background =
-                GradientDrawable().apply {
-                    setColor(Color.CYAN)
-                    cornerRadius = layoutParams.height / 2.0f
-                }
-            setOnClickListener {
-                val intent =
-                    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                        type = "audio/*"
-                        putExtra(
-                            Intent.EXTRA_MIME_TYPES,
-                            arrayOf("audio/x-wav", "audio/x-aac", "audio/mpeg"),
-                        )
-                    }
-                pickFile.launch(intent)
-            }
-        }
-
-        binding.btnAction.run {
-            background =
-                GradientDrawable().apply {
-                    setColor(Color.MAGENTA)
-                    cornerRadius = layoutParams.height / 2.0f
-                }
-            setOnClickListener {
-                syncPlayer.start()
-            }
-        }
-
-        binding.btnSeek.run {
-            background =
-                GradientDrawable().apply {
-                    setColor(Color.GREEN)
-                    cornerRadius = layoutParams.height / 2.0f
-                }
-            setOnClickListener {
-                lifecycleScope.launchIO {
-                    syncPlayer.seekTo(15 * 1000 * 1000)
-                }
+        setContent {
+            CompositionLocalProvider(
+                LocalSyncPlayer provides syncPlayer,
+                LocalPickFile provides pickFile,
+                LocalLifecycleOwner provides this,
+                LocalMainViewModel provides viewModel,
+            ) {
+                NavGraph()
             }
         }
     }
+
+    private suspend fun getFileNameFromUri(uri: Uri): String? =
+        withContext(Dispatchers.IO) {
+            var result: String? = null
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            cursor.use {
+                if (it != null && it.moveToFirst()) {
+                    val displayNameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (displayNameIndex != -1) {
+                        result = it.getString(displayNameIndex)
+                    }
+                }
+            }
+            result
+        }
 }

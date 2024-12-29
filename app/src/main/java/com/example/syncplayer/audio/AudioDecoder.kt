@@ -12,7 +12,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.isActive
 import java.nio.ByteBuffer
 
-class Decoder(
+class AudioDecoder(
     private val scope: CoroutineScope,
     filePath: String,
 ) {
@@ -21,13 +21,11 @@ class Decoder(
     private val decoder: MediaCodec
     private val extractor = MediaExtractor()
     private var queue = BlockQueue<ShortsInfo>(BUFFER_MAX)
-    private var extractorJob: Job? = null
     private var decodeJob: Job? = null
 
     init {
         extractor.setDataSource(filePath)
         var type = ""
-        // 选择找到的第一条音频轨道
         for (i in 0 until extractor.trackCount) {
             val format = extractor.getTrackFormat(i)
             val mime = format.getString(MediaFormat.KEY_MIME)
@@ -55,7 +53,6 @@ class Decoder(
     suspend fun consume(): ShortsInfo = queue.consume()
 
     suspend fun seekTo(timeUs: Long) {
-        extractorJob?.cancelAndJoin()
         decodeJob?.cancelAndJoin()
         queue.clear()
         decoder.flush()
@@ -64,39 +61,38 @@ class Decoder(
     }
 
     private fun startInner() {
-        extractorJob = runExtractor()
-        decodeJob = runDecoder()
+        decodeJob =
+            scope.launchIO {
+                val info = BufferInfo()
+                while (isActive) {
+                    extractorData()
+                    decoderData(info)
+                }
+            }
     }
 
-    private fun runExtractor() =
-        scope.launchIO {
-            while (isActive) {
-                val index = decoder.dequeueInputBuffer(0)
-                if (index > 0) {
-                    val inputBuffer = decoder.getInputBuffer(index) ?: ByteBuffer.allocate(0)
-                    val sampleSize = extractor.readSampleData(inputBuffer, 0)
-                    if (sampleSize < 0) {
-                        decoder.queueInputBuffer(index, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                    } else {
-                        decoder.queueInputBuffer(index, 0, sampleSize, extractor.sampleTime, 0)
-                        extractor.advance()
-                    }
-                }
+    private fun extractorData() {
+        val index = decoder.dequeueInputBuffer(0)
+        if (index > 0) {
+            val inputBuffer = decoder.getInputBuffer(index) ?: ByteBuffer.allocate(0)
+            val sampleSize = extractor.readSampleData(inputBuffer, 0)
+            if (sampleSize < 0) {
+                decoder.queueInputBuffer(index, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+            } else {
+                decoder.queueInputBuffer(index, 0, sampleSize, extractor.sampleTime, 0)
+                extractor.advance()
             }
         }
+    }
 
-    private fun runDecoder() =
-        scope.launchIO {
-            val info = BufferInfo()
-            while (isActive) {
-                val index = decoder.dequeueOutputBuffer(info, 0)
-                if (index > 0) {
-                    val byteBuffer = decoder.getOutputBuffer(index) ?: ByteBuffer.allocate(0)
-                    queue.produce(ShortsInfo.createShortsInfo(byteBuffer, info))
-                    decoder.releaseOutputBuffer(index, false)
-                }
-            }
+    private suspend fun decoderData(info: BufferInfo) {
+        val index = decoder.dequeueOutputBuffer(info, 0)
+        if (index > 0) {
+            val byteBuffer = decoder.getOutputBuffer(index) ?: ByteBuffer.allocate(0)
+            queue.produce(ShortsInfo.createShortsInfo(byteBuffer, info))
+            decoder.releaseOutputBuffer(index, false)
         }
+    }
 
     companion object {
         const val BUFFER_MAX = 4

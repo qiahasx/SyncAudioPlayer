@@ -1,7 +1,7 @@
 package com.example.syncplayer.audio
 
 class AudioCovert(
-    val decoder: Decoder,
+    val audioDecoder: AudioDecoder,
     val bufferSize: Int,
 ) {
     private var cache: ShortsInfo? = null
@@ -19,7 +19,7 @@ class AudioCovert(
     }
 
     private suspend fun getNext(info: ShortsInfo): Short {
-        val bufferInfo = cache ?: decoder.consume().also { cache = it }
+        val bufferInfo = cache ?: audioDecoder.consume().also { cache = it }
         info.flags = info.flags or bufferInfo.flags
         if (bufferInfo.size == 0) {
             cache = null

@@ -13,11 +13,6 @@ class BlockQueue<T>(val capacity: Int = 4) {
         return channel.receive()
     }
 
-    fun init() {
-        channel.close()
-        channel = Channel(capacity)
-    }
-
     fun clear() {
         while (channel.tryReceive().getOrNull() != null) {
         }

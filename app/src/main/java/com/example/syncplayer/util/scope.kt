@@ -1,5 +1,7 @@
 package com.example.syncplayer.util
 
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,3 +23,12 @@ suspend fun withIO(block: suspend () -> Unit) =
     }
 
 fun createExceptionHandler() = CoroutineExceptionHandler { _, throwable -> error("scope$throwable") }
+
+fun LifecycleOwner.launchMain(
+    consumeException: Boolean = true,
+    block: suspend CoroutineScope.() -> Unit,
+) = if (consumeException) {
+    lifecycleScope.launch(Dispatchers.IO + createExceptionHandler()) { block.invoke(this) }
+} else {
+    lifecycleScope.launch(Dispatchers.IO) { block.invoke(this) }
+}
