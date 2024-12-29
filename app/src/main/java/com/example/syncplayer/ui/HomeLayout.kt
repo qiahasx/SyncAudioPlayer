@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -21,12 +20,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.example.syncplayer.LocalPickFile
 import com.example.syncplayer.LocalSyncPlayer
+import com.example.syncplayer.ui.theme.ComposeTheme
 import com.example.syncplayer.util.launchIO
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun HomeLayout() {
-    MaterialTheme {
+    ComposeTheme {
         Scaffold { innerPadding ->
             Column(
                 modifier =

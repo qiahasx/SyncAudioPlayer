@@ -9,7 +9,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.example.syncplayer.audio.SyncPlayer
 import com.example.syncplayer.ui.NavGraph
@@ -45,9 +44,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CompositionLocalProvider(
-                LocalSyncPlayer provides syncPlayer,
                 LocalPickFile provides pickFile,
-                LocalLifecycleOwner provides this,
                 LocalMainViewModel provides viewModel,
             ) {
                 NavGraph()

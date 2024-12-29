@@ -3,6 +3,7 @@ package com.example.syncplayer.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.syncplayer.App
+import com.example.syncplayer.audio.SyncPlayer
 import com.example.syncplayer.model.AudioItem
 import com.example.syncplayer.util.debug
 import com.example.syncplayer.util.launchIO
@@ -17,15 +18,58 @@ import java.io.File
 class MainViewModel : ViewModel() {
     private val _items = MutableStateFlow<List<AudioItem>>(emptyList())
     val items: StateFlow<List<AudioItem>> = _items.asStateFlow()
+
     private val _navigationEvent = MutableSharedFlow<NavigationEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
 
-    // 定义一个 MutableSharedFlow 来发送消息
+    private val _playProgress = MutableStateFlow(0f)
+    val playProgress: StateFlow<Float> get() = _playProgress
+
+    private val _totalDuration = MutableStateFlow(60000f)
+    val totalDuration: StateFlow<Float> get() = _totalDuration
+
     private val _snackbarMessage = MutableSharedFlow<String>()
     val snackbarMessage = _snackbarMessage.asSharedFlow()
 
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying: StateFlow<Boolean> get() = _isPlaying
+
+    private val player by lazy { SyncPlayer(viewModelScope) }
+
     init {
         updateItem()
+    }
+
+    fun initPlayer() {
+        val items = _items.value
+        items.forEach {
+            player.setDataSource(it.filePath)
+        }
+        player.start()
+    }
+
+    fun seekTo(ms: Float) {
+        viewModelScope.launchIO {
+            _playProgress.emit(ms)
+        }
+    }
+
+    fun forward() {
+        viewModelScope.launchIO {
+            _playProgress.emit(_playProgress.value + 5000)
+        }
+    }
+
+    fun backward() {
+        viewModelScope.launchIO {
+            _playProgress.emit(_playProgress.value - 5000)
+        }
+    }
+
+    fun togglePlay() {
+        viewModelScope.launchIO {
+            _isPlaying.emit(!_isPlaying.value)
+        }
     }
 
     fun updateItem() {

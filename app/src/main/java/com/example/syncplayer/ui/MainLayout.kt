@@ -1,14 +1,8 @@
 package com.example.syncplayer.ui
 
 import android.content.Intent
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.EaseIn
-import androidx.compose.animation.core.EaseOut
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ElevatedButton
@@ -33,37 +28,33 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navDeepLink
 import com.example.syncplayer.Destinations
 import com.example.syncplayer.LocalMainViewModel
 import com.example.syncplayer.LocalNavController
 import com.example.syncplayer.LocalPickFile
 import com.example.syncplayer.R
 import com.example.syncplayer.model.AudioItem
+import com.example.syncplayer.ui.theme.ComposeTheme
 import com.example.syncplayer.util.debug
 import com.example.syncplayer.viewModel.MainViewModel
 
 @Composable
 fun MainLayout() {
-    MaterialTheme {
+    ComposeTheme {
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            topBar = topBar(),
+            topBar = topBar("Pick File"),
             floatingActionButton = addFileButton(),
         ) { innerPadding ->
             ItemList(innerPadding, snackbarHostState)
@@ -86,7 +77,9 @@ fun ItemList(
                 .padding(paddingValues = innerPadding),
     ) {
         LazyColumn(
-            Modifier.weight(1f),
+            Modifier
+                .weight(1f)
+                .padding(16.dp, 8.dp),
         ) {
             items(itemList) {
                 AudioItem(it)
@@ -128,8 +121,9 @@ fun AudioItem(item: AudioItem) {
     val viewModel = LocalMainViewModel.current
     Row(
         Modifier
-            .padding(0.dp, 8.dp)
+            .padding(0.dp, 6.dp)
             .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(16.dp))
             .clickable {
                 viewModel.deleteItem(item)
             },
@@ -148,7 +142,7 @@ fun AudioItem(item: AudioItem) {
                 .align(Alignment.CenterVertically),
         )
         Image(
-            painter = painterResource(id = R.drawable.close),
+            painter = painterResource(id = R.drawable.close_2),
             contentDescription = "",
             Modifier
                 .size(44.dp)
@@ -161,7 +155,7 @@ fun AudioItem(item: AudioItem) {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-fun topBar() =
+fun topBar(title: String) =
     @Composable {
         TopAppBar(
             colors =
@@ -170,7 +164,7 @@ fun topBar() =
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 ),
             title = {
-                Text("Top app bar")
+                Text(title)
             },
         )
     }
@@ -192,65 +186,3 @@ fun addFileButton() =
             Icon(Icons.Default.Add, contentDescription = "Pick File")
         }
     }
-
-@Composable
-fun NavGraph(
-    modifier: Modifier = Modifier,
-    navController: NavHostController = rememberNavController(),
-    start: String = Destinations.HOME_ROUTE, // 默认的初始页面为主页
-) {
-    CompositionLocalProvider(
-        LocalNavController provides navController,
-    ) {
-        NavHost(
-            modifier = modifier,
-            navController = navController,
-            startDestination = start,
-        ) {
-            composable(
-                route = Destinations.HOME_ROUTE,
-                deepLinks =
-                    listOf(
-                        navDeepLink { uriPattern = "${Destinations.APP_URI}/${Destinations.HOME_ROUTE}" },
-                    ),
-            ) {
-                MainLayout()
-            }
-            composable(
-                route = Destinations.PLAY_ROUTE,
-                deepLinks =
-                    listOf(
-                        navDeepLink { uriPattern = "${Destinations.APP_URI}/${Destinations.PLAY_ROUTE}" },
-                    ),
-                enterTransition = {
-                    fadeIn(
-                        animationSpec =
-                            tween(
-                                300,
-                                easing = LinearEasing,
-                            ),
-                    ) +
-                        slideIntoContainer(
-                            animationSpec = tween(300, easing = EaseIn),
-                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        )
-                },
-                exitTransition = {
-                    fadeOut(
-                        animationSpec =
-                            tween(
-                                300,
-                                easing = LinearEasing,
-                            ),
-                    ) +
-                        slideOutOfContainer(
-                            animationSpec = tween(300, easing = EaseOut),
-                            towards = AnimatedContentTransitionScope.SlideDirection.End,
-                        )
-                },
-            ) {
-                HomeLayout()
-            }
-        }
-    }
-}

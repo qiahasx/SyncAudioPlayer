@@ -1,4 +1,4 @@
-package com.talent.compose.ui.theme
+package com.example.syncplayer.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
