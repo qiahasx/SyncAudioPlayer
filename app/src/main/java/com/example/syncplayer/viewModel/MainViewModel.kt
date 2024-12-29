@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.syncplayer.App
 import com.example.syncplayer.audio.SyncPlayer
 import com.example.syncplayer.model.AudioItem
-import com.example.syncplayer.util.debug
 import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,41 +33,55 @@ class MainViewModel : ViewModel() {
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> get() = _isPlaying
 
-    private val player by lazy { SyncPlayer(viewModelScope) { _playProgress.emit(it / 1000f) } }
+    private val player by lazy {
+        SyncPlayer(
+            viewModelScope,
+            { _playProgress.emit(it / 1000f) },
+        ) { state ->
+            viewModelScope.launchIO {
+                _isPlaying.emit(state == SyncPlayer.State.PLAYING)
+            }
+        }
+    }
 
     init {
         updateItem()
     }
 
     fun initPlayer() {
-        val items = _items.value
-        items.forEach {
-            player.setDataSource(it.filePath)
+        viewModelScope.launchIO {
+            val items = _items.value
+            items.forEach {
+                player.setDataSource(it.filePath)
+            }
+            player.start()
+            _totalDuration.emit(player.getDuration() / 1000f)
         }
-        player.start()
     }
 
     fun seekTo(ms: Float) {
         viewModelScope.launchIO {
-            _playProgress.emit(ms)
+            player.seekTo(ms.toLong() * 1000)
         }
     }
 
     fun forward() {
         viewModelScope.launchIO {
-            _playProgress.emit(_playProgress.value + 5000)
+            seekTo(_playProgress.value + 5000)
         }
     }
 
     fun backward() {
         viewModelScope.launchIO {
-            _playProgress.emit(_playProgress.value - 5000)
+            seekTo(_playProgress.value - 5000)
         }
     }
 
     fun togglePlay() {
-        viewModelScope.launchIO {
-            _isPlaying.emit(!_isPlaying.value)
+        if (isPlaying.value) {
+            player.pause()
+        } else {
+            player.resume()
         }
     }
 
@@ -77,7 +90,6 @@ class MainViewModel : ViewModel() {
             App.context.getExternalFilesDir(AUDIO_PATH)?.listFiles()?.map {
                 AudioItem(it.name, it.absolutePath)
             } ?: emptyList()
-        debug(audioItems.size)
         viewModelScope.launchIO {
             _items.emit(audioItems)
         }
@@ -97,7 +109,6 @@ class MainViewModel : ViewModel() {
                 _navigationEvent.emit(NavigationEvent.NavigateToNextScreen)
             }
         } else {
-            debug("aaa")
             viewModelScope.launch {
                 _snackbarMessage.emit("No audio item available")
             }

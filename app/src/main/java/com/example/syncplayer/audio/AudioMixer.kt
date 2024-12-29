@@ -38,6 +38,11 @@ class AudioMixer(private val scope: CoroutineScope) {
         }
     }
 
+    fun getDuration(): Long {
+        if (map.isEmpty()) return -1
+        return map.values.maxOf { it.audioDecoder.audioInfo.duration }
+    }
+
     suspend fun seekTo(timeUs: Long) {
         mutex.lock()
         map.values.map {
@@ -89,6 +94,6 @@ class AudioMixer(private val scope: CoroutineScope) {
     companion object {
         const val MAX_SHORT_F = Short.MAX_VALUE.toFloat()
         const val BUFFER_SIZE = 2048
-        const val BUFFER_NUM = 2048
+        const val BUFFER_NUM = 64
     }
 }
