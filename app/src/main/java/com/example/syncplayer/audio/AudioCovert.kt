@@ -1,5 +1,8 @@
 package com.example.syncplayer.audio
 
+import android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM
+import com.example.syncplayer.util.debug
+
 class AudioCovert(
     val audioDecoder: AudioDecoder,
     val bufferSize: Int,
@@ -17,17 +20,21 @@ class AudioCovert(
     }
 
     private suspend fun getNext(info: ShortsInfo): Short {
-        val bufferInfo =
-            cache ?: audioDecoder.consume().also {
-                cache = it
-                info.sampleTime = it.sampleTime
-                info.flags = info.flags or it.flags
-            }
-        if (bufferInfo.size == 0) {
-            cache = null
-            return getNext(info)
+        val bufferInfo = cache ?: audioDecoder.consume().also {
+            cache = it
+            info.sampleTime = it.sampleTime
+            info.flags = it.flags
+            debug("${it.offset}  ${it.size}")
         }
-        val result = bufferInfo.shorts[bufferInfo.offset]
+        if (bufferInfo.size == 0 || bufferInfo.offset >= bufferInfo.shorts.size) {
+            if (bufferInfo.flags != BUFFER_FLAG_END_OF_STREAM) {
+                cache = null
+                return getNext(info)
+            } else {
+                return 0
+            }
+        }
+        val result = bufferInfo.shorts.getOrNull(bufferInfo.offset) ?: 0
         bufferInfo.offset++
         bufferInfo.size--
         return result
