@@ -8,17 +8,18 @@ import com.example.syncplayer.util.launchIO
 import com.example.syncplayer.util.withIO
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 
 class SyncPlayer(
     private val scope: CoroutineScope,
-    private val onProgress: (suspend (Long) -> Unit)? = null,
     private val onStateChange: ((State) -> Unit)? = null,
 ) {
     private val mix = AudioMixer(scope)
     private lateinit var audioTrack: AudioTrack
     private var state: State = State.CREATE
     private var playJob: Job? = null
+    val progress = MutableStateFlow(0L)
 
     @Throws(IllegalStateException::class)
     fun setDataSource(path: String): Int {
@@ -34,12 +35,6 @@ class SyncPlayer(
         onStateChange?.invoke(State.START)
         audioTrack.play()
         playJob = startInner()
-        val onProgress = onProgress ?: return
-        scope.launchIO {
-            mix.progress.collect {
-                onProgress.invoke(it)
-            }
-        }
         state = State.PLAYING
         onStateChange?.invoke(State.PLAYING)
     }
@@ -73,7 +68,7 @@ class SyncPlayer(
 
     suspend fun seekTo(timeUs: Long) =
         withIO {
-            require(state > State.START) { "SeekTo prohibits calls when the state is not START" }
+            require(state == State.PLAYING) { "SeekTo prohibits calls when the state is not PLAYING" }
             mix.seekTo(timeUs)
         }
 
@@ -81,13 +76,19 @@ class SyncPlayer(
         scope.launchIO {
             while (isActive) {
                 val bytesInfo = mix.queue.consume()
+                progress.emit(bytesInfo.sampleTime)
                 if (bytesInfo.flags == 4) {
-                    audioTrack.stop()
+                    completed()
                     break
                 }
                 audioTrack.write(bytesInfo.floats, bytesInfo.offset, bytesInfo.size, AudioTrack.WRITE_BLOCKING)
             }
         }
+
+    private suspend fun completed() {
+        seekTo(0)
+        pause()
+    }
 
     private fun initAudioTrack(): AudioTrack {
         val sampleRate = mix.getSampleRate()
@@ -106,7 +107,13 @@ class SyncPlayer(
                 .build()
         val bufferSize: Int =
             AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_PCM_FLOAT)
-        return AudioTrack(audioAttributes, format, bufferSize, AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE)
+        return AudioTrack(
+            audioAttributes,
+            format,
+            bufferSize,
+            AudioTrack.MODE_STREAM,
+            AudioManager.AUDIO_SESSION_ID_GENERATE
+        )
     }
 
     private fun coverChannelCountToChannelMask(channelCount: Int) =
@@ -114,6 +121,13 @@ class SyncPlayer(
             2 -> AudioFormat.CHANNEL_OUT_STEREO
             else -> AudioFormat.CHANNEL_OUT_MONO
         }
+
+    fun setVolume(id: Int, volume: Float) {
+        require(state > State.START) { "must after START" }
+        scope.launchIO {
+            mix.setVolume(id, volume)
+        }
+    }
 
     enum class State {
         RELEASE,

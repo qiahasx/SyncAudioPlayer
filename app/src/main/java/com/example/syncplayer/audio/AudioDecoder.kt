@@ -56,8 +56,14 @@ class AudioDecoder(
         decodeJob?.cancelAndJoin()
         queue.clear()
         decoder.flush()
-        extractor.seekTo(timeUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
-        startInner()
+        val progress = timeUs.coerceAtLeast(0).coerceAtMost(audioInfo.duration)
+        extractor.seekTo(progress, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+        if (progress == audioInfo.duration) {
+            val shortsInfo = ShortsInfo(ShortArray(0), 0, 0, audioInfo.duration, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+            queue.produce(shortsInfo)
+        } else {
+            startInner()
+        }
     }
 
     private fun startInner() {

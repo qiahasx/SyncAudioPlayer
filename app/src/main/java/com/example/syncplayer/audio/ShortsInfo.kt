@@ -25,4 +25,8 @@ class ShortsInfo(
             return ShortsInfo(shorts, 0, shortCount, info.presentationTimeUs, info.flags)
         }
     }
+
+    override fun toString(): String {
+        return "ShortsInfo(shorts=${shorts.contentToString()}, offset=$offset, size=$size, sampleTime=$sampleTime, flags=$flags)"
+    }
 }

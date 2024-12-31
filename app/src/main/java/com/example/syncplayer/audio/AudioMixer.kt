@@ -4,16 +4,18 @@ import androidx.collection.ArrayMap
 import com.example.syncplayer.queue.BlockQueue
 import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 class AudioMixer(private val scope: CoroutineScope) {
     val queue = BlockQueue<FloatsInfo>(BUFFER_NUM)
-    val progress = MutableStateFlow<Long>(0)
-    private val mutex = Mutex()
+    private var mixJob: Job? = null
     private val map = ArrayMap<Int, AudioCovert>()
+    private val volumeMap = ArrayMap<Int, Float>()
     private var cnt = 0
 
     fun addAudioSource(path: String): Int {
@@ -33,9 +35,8 @@ class AudioMixer(private val scope: CoroutineScope) {
 
     fun start() {
         if (map.isEmpty()) throw IllegalStateException("Not Add DataSource")
-        scope.launchIO {
-            startInner()
-        }
+        map.values.forEach { it.audioDecoder.start() }
+        mixJob = startInner()
     }
 
     fun getDuration(): Long {
@@ -44,24 +45,21 @@ class AudioMixer(private val scope: CoroutineScope) {
     }
 
     suspend fun seekTo(timeUs: Long) {
-        mutex.lock()
+        mixJob?.cancelAndJoin()
+        queue.clear()
+        delay(200)
         map.values.map {
             scope.async {
                 it.clearCache()
                 it.audioDecoder.seekTo(timeUs)
             }
         }.awaitAll()
-        queue.clear()
-        mutex.unlock()
+        mixJob = startInner()
     }
 
-    // TODO 不同音轨的声道数和采样率可能不同直接相加pcm数据，时间对不上，需转换
-    private suspend fun startInner() {
-        map.values.forEach { it.audioDecoder.start() }
-        while (true) {
-            mutex.lock()
+    private fun startInner() = scope.launchIO {
+        while (isActive) {
             mix()
-            mutex.unlock()
         }
     }
 
@@ -71,29 +69,41 @@ class AudioMixer(private val scope: CoroutineScope) {
             shortMap[id] = decoder.getBuffer()
         }
         val firstInfo = shortMap.values.iterator().next()
-        progress.emit(firstInfo.sampleTime)
         val length = firstInfo.size
         val floats = FloatArray(length)
-        shortMap.values.forEach { info ->
-            floats.addShortInfo(info)
-        }
-        for (i in floats.indices) {
-            // TODO 这个混音逻辑不行 后续做成可以由用户配置的
-            floats[i] += floats[i]
+        shortMap.entries.forEach { (id, info) ->
+            floats.addShortInfo(id, info)
         }
         queue.produce(FloatsInfo(floats, 0, length, firstInfo.sampleTime, firstInfo.flags))
     }
 
-    private fun FloatArray.addShortInfo(info: ShortsInfo) {
+    private fun FloatArray.addShortInfo(id: Int, info: ShortsInfo) {
         val offset = info.offset
         for (i in offset until offset + info.size) {
-            this[i - offset] += info.shorts[i] / MAX_SHORT_F
+            this[i - offset] += info.shorts[i] * volumeMap.getOrPut(id) { 1f } / MAX_SHORT_F
         }
+    }
+
+    suspend fun setVolume(id: Int, volume: Float) {
+        mixJob?.cancelAndJoin()
+        volumeMap[id] = volume
+        val info = queue.tryConsume()
+        if (info != null) {
+            queue.clear()
+            map.values.map {
+                scope.async {
+                    it.clearCache()
+                    it.audioDecoder.seekTo(info.sampleTime)
+                }
+            }.awaitAll()
+        }
+        delay(200)
+        mixJob = startInner()
     }
 
     companion object {
         const val MAX_SHORT_F = Short.MAX_VALUE.toFloat()
         const val BUFFER_SIZE = 2048
-        const val BUFFER_NUM = 64
+        const val BUFFER_NUM = 2048
     }
 }

@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 fun CoroutineScope.launchIO(
-    consumeException: Boolean = true,
+    consumeException: Boolean = false,
     block: suspend CoroutineScope.() -> Unit,
 ) = if (consumeException) {
     launch(Dispatchers.IO + createExceptionHandler()) { block.invoke(this) }
@@ -28,7 +28,7 @@ fun LifecycleOwner.launchMain(
     consumeException: Boolean = true,
     block: suspend CoroutineScope.() -> Unit,
 ) = if (consumeException) {
-    lifecycleScope.launch(Dispatchers.IO + createExceptionHandler()) { block.invoke(this) }
+    lifecycleScope.launch(Dispatchers.Main + createExceptionHandler()) { block.invoke(this) }
 } else {
-    lifecycleScope.launch(Dispatchers.IO) { block.invoke(this) }
+    lifecycleScope.launch(Dispatchers.Main) { block.invoke(this) }
 }
