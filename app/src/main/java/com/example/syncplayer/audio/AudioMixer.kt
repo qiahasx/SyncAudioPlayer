@@ -48,7 +48,7 @@ class AudioMixer(private val scope: CoroutineScope) {
     suspend fun seekTo(timeUs: Long) {
         mixJob?.cancelAndJoin()
         queue.clear()
-        delay(200)
+        delay(100)
         map.values.map {
             scope.async {
                 it.clearCache()
@@ -71,7 +71,6 @@ class AudioMixer(private val scope: CoroutineScope) {
                 }
             }.awaitAll()
         }
-        delay(200)
         mixJob = startInner()
     }
 

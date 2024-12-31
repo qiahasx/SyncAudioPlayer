@@ -44,6 +44,7 @@ import com.example.syncplayer.model.AudioItem
 import com.example.syncplayer.ui.theme.ComposeTheme
 import com.example.syncplayer.ui.theme.Purple200
 import com.example.syncplayer.ui.theme.Teal200
+import kotlinx.coroutines.delay
 
 @SuppressLint("RememberReturnType")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,7 +74,6 @@ fun PlayLayout() {
     }
 }
 
-@SuppressLint("RememberReturnType")
 @Composable
 fun PlayController() {
     Column(
@@ -90,6 +90,7 @@ fun PlayController() {
         var isUserInteracting by remember { mutableStateOf(false) }
         LaunchedEffect(viewModel, isUserInteracting) {
             if (isUserInteracting) return@LaunchedEffect
+            delay(500)
             viewModel.playProgress.collect {
                 progress = it
             }
@@ -104,8 +105,7 @@ fun PlayController() {
                 isUserInteracting = false
                 viewModel.seekTo(progress)
             },
-            colors =
-            SliderDefaults.colors(
+            colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = Color.White,

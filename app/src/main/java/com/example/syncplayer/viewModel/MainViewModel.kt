@@ -3,7 +3,7 @@ package com.example.syncplayer.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.syncplayer.App
-import com.example.syncplayer.audio.SyncPlayer
+import com.example.syncplayer.audio.AudioSyncPlayer
 import com.example.syncplayer.model.AudioItem
 import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -34,11 +34,11 @@ class MainViewModel : ViewModel() {
     val isPlaying: StateFlow<Boolean> get() = _isPlaying
 
     private val player by lazy {
-        SyncPlayer(
+        AudioSyncPlayer(
             viewModelScope,
         ) { state ->
             viewModelScope.launchIO {
-                _isPlaying.emit(state == SyncPlayer.State.PLAYING)
+                _isPlaying.emit(state == AudioSyncPlayer.State.PLAYING)
             }
         }
     }

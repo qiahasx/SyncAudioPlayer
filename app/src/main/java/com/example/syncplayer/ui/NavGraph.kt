@@ -22,7 +22,7 @@ import com.example.syncplayer.LocalNavController
 fun NavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    start: String = Destinations.HOME_ROUTE, // 默认的初始页面为主页
+    start: String = Destinations.HOME_ROUTE,
 ) {
     CompositionLocalProvider(
         LocalNavController provides navController,

@@ -11,7 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 
-class SyncPlayer(
+class AudioSyncPlayer(
     private val scope: CoroutineScope,
     private val onStateChange: ((State) -> Unit)? = null,
 ) {
