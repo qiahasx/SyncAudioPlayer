@@ -81,7 +81,7 @@ class SyncPlayer(
                     completed()
                     break
                 }
-                audioTrack.write(bytesInfo.floats, bytesInfo.offset, bytesInfo.size, AudioTrack.WRITE_BLOCKING)
+                audioTrack.write(bytesInfo.shorts, bytesInfo.offset, bytesInfo.size, AudioTrack.WRITE_BLOCKING)
             }
         }
 
@@ -103,10 +103,10 @@ class SyncPlayer(
             AudioFormat.Builder()
                 .setSampleRate(sampleRate)
                 .setChannelMask(channelMask)
-                .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                 .build()
         val bufferSize: Int =
-            AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_PCM_FLOAT)
+            AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_PCM_16BIT)
         return AudioTrack(
             audioAttributes,
             format,
