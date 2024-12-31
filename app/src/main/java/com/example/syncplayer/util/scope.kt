@@ -22,7 +22,7 @@ suspend fun withIO(block: suspend () -> Unit) =
         block.invoke()
     }
 
-fun createExceptionHandler() = CoroutineExceptionHandler { _, throwable -> error("scope$throwable") }
+fun createExceptionHandler() = CoroutineExceptionHandler { _, throwable -> debug("scope$throwable") }
 
 fun LifecycleOwner.launchMain(
     consumeException: Boolean = true,
