@@ -36,7 +36,6 @@ class MainViewModel : ViewModel() {
     private val player by lazy {
         SyncPlayer(
             viewModelScope,
-            { _playProgress.emit(it / 1000f) },
         ) { state ->
             viewModelScope.launchIO {
                 _isPlaying.emit(state == SyncPlayer.State.PLAYING)
@@ -50,12 +49,14 @@ class MainViewModel : ViewModel() {
 
     fun initPlayer() {
         viewModelScope.launchIO {
-            val items = _items.value
-            items.forEach {
-                player.setDataSource(it.filePath)
+            _items.value.forEach {
+                it.id = player.setDataSource(it.filePath)
             }
             player.start()
             _totalDuration.emit(player.getDuration() / 1000f)
+            player.progress.collect {
+                _playProgress.emit(it / 1000f)
+            }
         }
     }
 
@@ -113,6 +114,11 @@ class MainViewModel : ViewModel() {
                 _snackbarMessage.emit("No audio item available")
             }
         }
+    }
+
+    fun setVolume(item: AudioItem, volume: Float) {
+        player.setVolume(item.id, volume)
+        item.volume.value = volume
     }
 
     // 定义一个密封类来表示导航事件

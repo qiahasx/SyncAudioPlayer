@@ -24,9 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,10 +58,10 @@ fun PlayLayout() {
             topBar = {
                 TopAppBar(
                     colors =
-                        topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            titleContentColor = MaterialTheme.colorScheme.primary,
-                        ),
+                    topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.primary,
+                    ),
                     title = {
                         Text("Play Track")
                     },
@@ -82,22 +84,37 @@ fun PlayController() {
             .padding(12.dp),
     ) {
         val viewModel = LocalMainViewModel.current
-        val progress by viewModel.playProgress.collectAsState()
         val duration by viewModel.totalDuration.collectAsState()
         val playing by viewModel.isPlaying.collectAsState()
+        var progress by remember { mutableFloatStateOf(0f) }
+        var isUserInteracting by remember { mutableStateOf(false) }
+        LaunchedEffect(viewModel, isUserInteracting) {
+            if (isUserInteracting) return@LaunchedEffect
+            viewModel.playProgress.collect {
+                progress = it
+            }
+        }
         Slider(
             value = progress,
-            { viewModel.seekTo(it) },
+            onValueChange = { newValue ->
+                progress = newValue
+                isUserInteracting = true
+            },
+            onValueChangeFinished = {
+                isUserInteracting = false
+                viewModel.seekTo(progress)
+            },
             colors =
-                SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = Color.White,
-                ),
+            SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = Color.White,
+            ),
             valueRange = 0f..duration,
-            modifier = Modifier.height(22.dp).padding(end = 12.dp),
+            modifier = Modifier
+                .height(22.dp)
+                .padding(end = 12.dp)
         )
-
         Row(
             Modifier
                 .align(Alignment.CenterHorizontally)
@@ -106,17 +123,28 @@ fun PlayController() {
             Image(
                 painter = painterResource(id = R.drawable.back),
                 contentDescription = "",
-                Modifier.size(44.dp).padding(end = 12.dp).align(Alignment.CenterVertically).clickable { viewModel.backward() },
+                Modifier
+                    .size(44.dp)
+                    .padding(end = 12.dp)
+                    .align(Alignment.CenterVertically)
+                    .clickable { viewModel.backward() },
             )
             Image(
                 painter = painterResource(id = if (playing) R.drawable.pause else R.drawable.play),
                 contentDescription = "",
-                Modifier.size(60.dp).align(Alignment.CenterVertically).clickable { viewModel.togglePlay() },
+                Modifier
+                    .size(60.dp)
+                    .align(Alignment.CenterVertically)
+                    .clickable { viewModel.togglePlay() },
             )
             Image(
                 painter = painterResource(id = R.drawable.forwrad),
                 contentDescription = "",
-                Modifier.size(44.dp).padding(start = 12.dp).align(Alignment.CenterVertically).clickable { viewModel.forward() },
+                Modifier
+                    .size(44.dp)
+                    .padding(start = 12.dp)
+                    .align(Alignment.CenterVertically)
+                    .clickable { viewModel.forward() },
             )
         }
     }
@@ -126,9 +154,15 @@ fun PlayController() {
 fun AudioTrackList(paddingValues: PaddingValues) {
     val viewModel = LocalMainViewModel.current
     val itemList by viewModel.items.collectAsState()
-    Column(Modifier.fillMaxSize().padding(paddingValues)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+    ) {
         LazyColumn(
-            Modifier.weight(1f).padding(0.dp, 6.dp),
+            Modifier
+                .weight(1f)
+                .padding(0.dp, 6.dp),
         ) {
             var index = 0
             items(itemList) {
@@ -144,7 +178,8 @@ fun TrackItem(
     item: AudioItem,
     index: Int,
 ) {
-    var volume by remember { mutableFloatStateOf(100f) }
+    val viewModel = LocalMainViewModel.current
+    var volume by remember(item) { item.volume }
     Row(
         Modifier
             .padding(16.dp, 6.dp)
@@ -169,15 +204,18 @@ fun TrackItem(
             Slider(
                 value = volume,
                 onValueChange = { volume = it },
+                onValueChangeFinished = { viewModel.setVolume(item, volume) },
                 colors =
-                    SliderDefaults.colors(
-                        thumbColor = color,
-                        activeTrackColor = color,
-                        inactiveTrackColor = Color.White,
-                    ),
+                SliderDefaults.colors(
+                    thumbColor = color,
+                    activeTrackColor = color,
+                    inactiveTrackColor = Color.White,
+                ),
                 steps = 10,
-                valueRange = 0f..100f,
-                modifier = Modifier.height(22.dp).padding(end = 12.dp),
+                valueRange = 0f..1f,
+                modifier = Modifier
+                    .height(22.dp)
+                    .padding(end = 12.dp),
             )
         }
     }
