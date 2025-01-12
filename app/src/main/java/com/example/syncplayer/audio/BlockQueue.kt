@@ -1,4 +1,4 @@
-package com.example.syncplayer.queue
+package com.example.syncplayer.audio
 
 import kotlinx.coroutines.channels.Channel
 

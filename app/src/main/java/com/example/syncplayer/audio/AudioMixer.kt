@@ -1,7 +1,6 @@
 package com.example.syncplayer.audio
 
 import androidx.collection.ArrayMap
-import com.example.syncplayer.queue.BlockQueue
 import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
