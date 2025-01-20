@@ -68,12 +68,13 @@ fun ItemList(
 ) {
     val viewModel = LocalMainViewModel.current
     val itemList = viewModel.items.collectAsState().value
+    val audioTranscoder = viewModel.audioTranscoders.collectAsState().value
     val navController = LocalNavController.current
     Column(
         modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(paddingValues = innerPadding),
+        Modifier
+            .fillMaxSize()
+            .padding(paddingValues = innerPadding),
     ) {
         LazyColumn(
             Modifier
@@ -111,6 +112,17 @@ fun ItemList(
             snackbarHostState.showSnackbar(message)
         }
     }
+
+    if (audioTranscoder != null) {
+        val format = audioTranscoder.getInputFormat()
+        AudioInfoDialog(
+            format.sampleRate,
+            format.channelNum,
+            { viewModel.releaseAudioTranscoders() }) { sampleRate, channelNum ->
+            audioTranscoder.setOutputFormat(sampleRate, channelNum)
+            viewModel.startAudioTranscoders()
+        }
+    }
 }
 
 @Composable
@@ -145,7 +157,7 @@ fun AudioItem(item: AudioItem) {
                 .size(44.dp)
                 .padding(4.dp)
                 .clickable {
-                    viewModel.deleteItem(item)
+                    viewModel.createAudioTranscoders(item)
                 },
         )
     }
@@ -156,10 +168,10 @@ fun topBar(title: String) =
     @Composable {
         TopAppBar(
             colors =
-                topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                ),
+            topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                titleContentColor = MaterialTheme.colorScheme.primary,
+            ),
             title = {
                 Text(title)
             },

@@ -49,8 +49,6 @@ class AudioDecoder(
         startInner()
     }
 
-    suspend fun consume(): ShortsInfo = queue.consume()
-
     suspend fun seekTo(timeUs: Long) {
         decodeJob?.cancelAndJoin()
         queue.clear()

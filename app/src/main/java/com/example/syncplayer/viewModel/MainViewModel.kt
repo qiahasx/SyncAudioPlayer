@@ -132,14 +132,12 @@ class MainViewModel : ViewModel() {
     }
 
     fun releaseAudioTranscoders() {
-        audioTranscoders.value?.release()
+//        audioTranscoders.value?.release()
         audioTranscoders.value = null
     }
 
     fun startAudioTranscoders() {
         audioTranscoders.value?.start()
-        // 释放资源
-        audioTranscoders.value = null
     }
 
     // 定义一个密封类来表示导航事件
