@@ -16,10 +16,10 @@ class AudioDecoder(
     filePath: String,
 ) {
     val audioInfo: AudioInfo
+    var queue = BlockQueue<ShortsInfo>(BUFFER_MAX)
     private var trackIndex: Int = -1
     private val decoder: MediaCodec
     private val extractor = MediaExtractor()
-    private var queue = BlockQueue<ShortsInfo>(BUFFER_MAX)
     private var decodeJob: Job? = null
 
     init {
@@ -97,6 +97,10 @@ class AudioDecoder(
             queue.produce(ShortsInfo.createShortsInfo(byteBuffer, info))
             decoder.releaseOutputBuffer(index, false)
         }
+    }
+
+    fun release() {
+
     }
 
     companion object {

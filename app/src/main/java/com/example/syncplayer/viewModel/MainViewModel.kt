@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.syncplayer.App
 import com.example.syncplayer.audio.AudioSyncPlayer
+import com.example.syncplayer.audio.AudioTranscoder
 import com.example.syncplayer.model.AudioItem
 import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -32,6 +33,8 @@ class MainViewModel : ViewModel() {
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> get() = _isPlaying
+
+    val audioTranscoders = MutableStateFlow<AudioTranscoder?>(null)
 
     private val player by lazy {
         AudioSyncPlayer(
@@ -119,6 +122,24 @@ class MainViewModel : ViewModel() {
     fun setVolume(item: AudioItem, volume: Float) {
         player.setVolume(item.id, volume)
         item.volume.value = volume
+    }
+
+    fun createAudioTranscoders(item: AudioItem) {
+        require(audioTranscoders.value == null) { "have audioTranscoder not release" }
+        viewModelScope.launchIO {
+            audioTranscoders.emit(AudioTranscoder(item, viewModelScope))
+        }
+    }
+
+    fun releaseAudioTranscoders() {
+        audioTranscoders.value?.release()
+        audioTranscoders.value = null
+    }
+
+    fun startAudioTranscoders() {
+        audioTranscoders.value?.start()
+        // 释放资源
+        audioTranscoders.value = null
     }
 
     // 定义一个密封类来表示导航事件

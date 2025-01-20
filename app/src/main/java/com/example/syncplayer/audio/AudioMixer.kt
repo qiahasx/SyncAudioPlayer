@@ -25,23 +25,23 @@ class AudioMixer(private val scope: CoroutineScope) {
 
     fun getSampleRate(): Int {
         if (map.isEmpty()) return -1
-        return map.values.maxOf { it.audioDecoder.audioInfo.sampleRate }
+        return map.values.maxOf { it.getInputFormat().sampleRate }
     }
 
     fun getChannelCount(): Int {
         if (map.isEmpty()) return -1
-        return map.values.maxOf { it.audioDecoder.audioInfo.channelCount }
+        return map.values.maxOf { it.getInputFormat().channelCount }
     }
 
     fun start() {
         if (map.isEmpty()) throw IllegalStateException("Not Add DataSource")
-        map.values.forEach { it.audioDecoder.start() }
+        map.values.forEach { it.start() }
         mixJob = startInner()
     }
 
     fun getDuration(): Long {
         if (map.isEmpty()) return -1
-        return map.values.maxOf { it.audioDecoder.audioInfo.duration }
+        return map.values.maxOf { it.getInputFormat().duration }
     }
 
     suspend fun seekTo(timeUs: Long) {
@@ -50,8 +50,7 @@ class AudioMixer(private val scope: CoroutineScope) {
         delay(100)
         map.values.map {
             scope.async {
-                it.clearCache()
-                it.audioDecoder.seekTo(timeUs)
+                it.seekTo(timeUs)
             }
         }.awaitAll()
         mixJob = startInner()
@@ -65,12 +64,19 @@ class AudioMixer(private val scope: CoroutineScope) {
             queue.clear()
             map.values.map {
                 scope.async {
-                    it.clearCache()
-                    it.audioDecoder.seekTo(info.sampleTime)
+                    it.seekTo(info.sampleTime)
                 }
             }.awaitAll()
         }
         mixJob = startInner()
+    }
+
+    fun release() {
+        mixJob?.cancel()
+        queue.clear()
+        map.values.forEach { it.release() }
+        map.clear()
+        volumeMap.clear()
     }
 
     private fun startInner() = scope.launchIO {
@@ -113,15 +119,7 @@ class AudioMixer(private val scope: CoroutineScope) {
         return ShortsInfo(shorts, 0, size, firstInfo.sampleTime, firstInfo.flags)
     }
 
-    private fun FloatArray.addShortInfo(id: Int, info: ShortsInfo) {
-        val offset = info.offset
-        for (i in offset until offset + info.size) {
-            this[i - offset] += info.shorts[i] * volumeMap.getOrPut(id) { 1f } / MAX_SHORT_F
-        }
-    }
-
     companion object {
-        const val MAX_SHORT_F = Short.MAX_VALUE.toFloat()
         const val BUFFER_SIZE = 2048
         const val BUFFER_NUM = 2048
         const val STEP_SIZE = 32
