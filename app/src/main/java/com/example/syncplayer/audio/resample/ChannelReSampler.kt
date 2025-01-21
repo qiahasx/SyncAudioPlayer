@@ -1,7 +1,7 @@
-package com.example.syncplayer.audio.transformer
+package com.example.syncplayer.audio.resample
 
 import com.example.syncplayer.audio.ShortsInfo
 
-interface ReSampler {
+interface ChannelReSampler {
     fun reSampler(pcmData: ShortsInfo): ShortsInfo
 }

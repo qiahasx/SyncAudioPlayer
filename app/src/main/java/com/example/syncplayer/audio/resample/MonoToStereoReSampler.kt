@@ -1,9 +1,8 @@
-package com.example.syncplayer.audio.transformer
+package com.example.syncplayer.audio.resample
 
 import com.example.syncplayer.audio.ShortsInfo
 
-class MonoToStereoReSampler : ReSampler {
-
+class MonoToStereoReSampler : ChannelReSampler {
     override fun reSampler(pcmData: ShortsInfo): ShortsInfo {
         val shorts = ShortArray(pcmData.size * 2) { index ->
             pcmData.shorts[pcmData.offset + index / 2]

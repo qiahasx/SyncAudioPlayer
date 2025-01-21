@@ -48,6 +48,7 @@ class AudioEncoder(
         codec.start()
         scope.launchIO {
             val start = System.currentTimeMillis()
+            debug("start: ${System.currentTimeMillis() - start}")
             while (!isEndOfEncoded) {
                 submitPcmToCodec()
                 processOutputBuffer()
