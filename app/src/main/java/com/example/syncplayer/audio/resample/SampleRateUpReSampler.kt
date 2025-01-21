@@ -4,8 +4,12 @@ import com.example.syncplayer.audio.AudioTranscoder
 import com.example.syncplayer.audio.ShortsInfo
 import kotlin.math.roundToInt
 
-class SampleRateUpReSampler : SampleRateReSampler {
-    override fun reSampler(pcmData: ShortsInfo, oldRate: Int, newRate: Int, channels: AudioTranscoder.Channels): ShortsInfo {
+class SampleRateUpReSampler(
+    private val oldRate: Int,
+    private val newRate: Int,
+    private val channels: AudioTranscoder.Channels,
+) : ReSampler {
+    override fun reSampler(pcmData: ShortsInfo): ShortsInfo {
         if (newRate <= oldRate) {
             throw IllegalArgumentException("New sample rate must be greater than the old sample rate for upsampling.")
         }

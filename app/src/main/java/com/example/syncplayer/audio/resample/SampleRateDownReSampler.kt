@@ -4,12 +4,16 @@ import com.example.syncplayer.audio.AudioTranscoder
 import com.example.syncplayer.audio.ShortsInfo
 import kotlin.math.ceil
 
-class SampleRateDownReSampler : SampleRateReSampler {
+class SampleRateDownReSampler(
+    private val oldRate: Int,
+    private val newRate: Int,
+    private val channels: AudioTranscoder.Channels,
+) : ReSampler {
     private fun ratio(remaining: Int, all: Int): Float {
         return remaining.toFloat() / all
     }
 
-    override fun reSampler(pcmData: ShortsInfo, oldRate: Int, newRate: Int, channels: AudioTranscoder.Channels): ShortsInfo {
+    override fun reSampler(pcmData: ShortsInfo): ShortsInfo {
         require(oldRate > newRate) { "oldRate must be greater than newRate" }
         val inputSamples = pcmData.size / channels.value
         val outputSamples = ceil(inputSamples * (newRate.toDouble() / oldRate)).toInt()
@@ -22,7 +26,6 @@ class SampleRateDownReSampler : SampleRateReSampler {
         var inputIndex = pcmData.offset
         var outputIndex = 0
         while (remainingOutputSamples > 0 && remainingDropSamples >= 0 && inputIndex < pcmData.size) {
-            // 判断是保留样本还是丢弃样本
             if (remainingOutputSamplesRatio >= remainingDropSamplesRatio) {
                 for (i in 0 until channels.value) {
                     if (inputIndex + i < pcmData.size) {
@@ -32,13 +35,11 @@ class SampleRateDownReSampler : SampleRateReSampler {
                 remainingOutputSamples--
                 remainingOutputSamplesRatio = ratio(remainingOutputSamples, outputSamples)
             } else {
-                // 丢弃样本 - 仅更新输入索引而不写入输出数组
                 inputIndex += channels.value
                 remainingDropSamples--
                 remainingDropSamplesRatio = ratio(remainingDropSamples, dropSamples)
             }
         }
-        // 处理剩余的输出样本或丢弃样本
         while (remainingOutputSamples > 0 && inputIndex < pcmData.size) {
             for (i in 0 until channels.value) {
                 if (inputIndex + i < pcmData.size) {

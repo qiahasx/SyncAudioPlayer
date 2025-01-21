@@ -2,7 +2,7 @@ package com.example.syncplayer.audio.resample
 
 import com.example.syncplayer.audio.ShortsInfo
 
-class StereoToMonoReSampler : ChannelReSampler {
+class StereoToMonoReSampler : ReSampler {
     private var attenuationFactor = 1f
 
     override fun reSampler(pcmData: ShortsInfo): ShortsInfo {
