@@ -9,6 +9,18 @@ class SampleRateDownReSampler(
     private val newRate: Int,
     private val channels: AudioTranscoder.Channels,
 ) : ReSampler {
+    constructor(oldRate: Int, newRate: Int, channels: Int) : this(
+        oldRate,
+        newRate,
+        if (channels == 1) AudioTranscoder.Channels.Mono else AudioTranscoder.Channels.Stereo
+    )
+
+    init {
+        if (oldRate > newRate) {
+            error("oldRate must be greater than newRate")
+        }
+    }
+
     private fun ratio(remaining: Int, all: Int): Float {
         return remaining.toFloat() / all
     }

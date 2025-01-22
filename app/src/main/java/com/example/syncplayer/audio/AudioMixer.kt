@@ -35,7 +35,10 @@ class AudioMixer(private val scope: CoroutineScope) {
 
     fun start() {
         if (map.isEmpty()) throw IllegalStateException("Not Add DataSource")
-        map.values.forEach { it.start() }
+        map.values.forEach {
+            it.setTargetFormat(getSampleRate(), getChannelCount())
+            it.start()
+        }
         mixJob = startInner()
     }
 

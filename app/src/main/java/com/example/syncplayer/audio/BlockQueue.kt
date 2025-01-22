@@ -2,7 +2,7 @@ package com.example.syncplayer.audio
 
 import kotlinx.coroutines.channels.Channel
 
-class BlockQueue<T>(val capacity: Int = 4) {
+class BlockQueue<T>(capacity: Int = 4) {
     private var channel = Channel<T>(capacity)
 
     suspend fun produce(item: T) {
