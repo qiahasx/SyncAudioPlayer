@@ -98,7 +98,11 @@ class AudioDecoder(
     }
 
     fun release() {
-
+        decodeJob?.cancel()
+        queue.clear()
+        decoder.stop()
+        decoder.release()
+        extractor.release()
     }
 
     companion object {

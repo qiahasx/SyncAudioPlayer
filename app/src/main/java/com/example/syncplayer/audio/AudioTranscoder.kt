@@ -11,14 +11,19 @@ class AudioTranscoder(
     scope: CoroutineScope = GlobalScope,
 ) {
     private val decoder = AudioDecoder(scope, item.filePath)
-    private val encoder = AudioEncoder(decoder.audioInfo, scope)
+    private val encoder by lazy {
+        AudioEncoder(decoder.audioInfo, scope)
+    }
+    private var targetSampleRate = decoder.audioInfo.sampleRate
+    private var targetChannels = if (decoder.audioInfo.channelCount > 1) Channels.Stereo else Channels.Mono
 
     fun getInputFormat(): Format {
         return Format(decoder.audioInfo.sampleRate, if (decoder.audioInfo.channelCount == 1) Channels.Mono else Channels.Stereo)
     }
 
     fun setOutputFormat(sampleRate: Int, channelNum: Channels) {
-        encoder.setOutPutFormat(sampleRate, channelNum)
+        targetSampleRate = sampleRate
+        targetChannels = channelNum
     }
 
     fun release() {
@@ -27,6 +32,7 @@ class AudioTranscoder(
     }
 
     fun start() {
+        encoder.setOutPutFormat(targetSampleRate, targetChannels)
         encoder.setPcmData(decoder.queue)
         decoder.start()
         encoder.start()

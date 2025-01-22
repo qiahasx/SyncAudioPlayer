@@ -133,16 +133,15 @@ fun AudioItem(item: AudioItem) {
             .padding(0.dp, 6.dp)
             .fillMaxWidth()
             .background(Color.White, RoundedCornerShape(16.dp))
-            .clickable {
-                viewModel.deleteItem(item)
-            },
     ) {
         Image(
-            painter = painterResource(id = R.drawable.track),
+            painter = painterResource(id = R.drawable.ic_info),
             contentDescription = "",
             Modifier
                 .size(44.dp)
-                .padding(12.dp),
+                .padding(6.dp)
+                .clickable { viewModel.createAudioTranscoders(item) }
+                .padding(6.dp)
         )
         Text(
             item.name,
@@ -157,7 +156,7 @@ fun AudioItem(item: AudioItem) {
                 .size(44.dp)
                 .padding(4.dp)
                 .clickable {
-                    viewModel.createAudioTranscoders(item)
+                    viewModel.deleteItem(item)
                 },
         )
     }

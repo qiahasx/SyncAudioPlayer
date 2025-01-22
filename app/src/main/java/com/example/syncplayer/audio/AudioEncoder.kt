@@ -10,6 +10,7 @@ import com.example.syncplayer.audio.resample.SampleRateUpReSampler
 import com.example.syncplayer.util.debug
 import com.example.syncplayer.util.launchIO
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * 音频编码，封装
@@ -28,6 +29,7 @@ class AudioEncoder(
     private var processor: PcmBufferProcessor? = null
     private var isEndOfStreamReached = false
     private var isEndOfEncoded = false
+    private val sampleTime = MutableStateFlow<Long>(0)
     private val format = MediaFormat().apply {
         setString(MediaFormat.KEY_MIME, MediaFormat.MIMETYPE_AUDIO_AAC)
         setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectMain)
@@ -80,7 +82,6 @@ class AudioEncoder(
                 muxerTrackIndex = muxer.addTrack(codec.outputFormat)
                 muxer.start()
             }
-
             MediaCodec.INFO_TRY_AGAIN_LATER -> {}
             else -> {
                 if (tempInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
@@ -103,6 +104,7 @@ class AudioEncoder(
         val pcmShortInfo = processor.getBuffer(buffer.remaining())
         buffer.put(pcmShortInfo.shorts)
         codec.queueInputBuffer(index, 0, buffer.position() * 2, pcmShortInfo.sampleTime, pcmShortInfo.flags)
+        sampleTime.emit(pcmShortInfo.sampleTime)
         if (pcmShortInfo.flags == MediaCodec.BUFFER_FLAG_END_OF_STREAM) {
             isEndOfStreamReached = true
         }
