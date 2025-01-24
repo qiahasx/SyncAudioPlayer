@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.syncplayer.LocalDialogManager
+import com.example.syncplayer.LocalMainViewModel
 import com.example.syncplayer.audio.AudioTranscoder
 import com.example.syncplayer.model.AudioItem
 
@@ -39,10 +40,11 @@ class AudioInfoDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AudioInfoDialog(
+fun AudioResampleDialog(
     controller: AudioInfoDialog,
 ) {
     val scope = rememberCoroutineScope()
+    val viewModel = LocalMainViewModel.current
     val transcoder = remember(controller) { AudioTranscoder(controller.audioItem, scope) }
     var sample by remember(controller) { mutableStateOf("${transcoder.getInputFormat().sampleRate}") }
     var channels by remember(controller) { mutableStateOf(transcoder.getInputFormat().channelNum) }
@@ -107,7 +109,26 @@ fun AudioInfoDialog(
                     Text("Cancel")
                 }
                 Button(
-                    {},
+                    {
+                        if (sample.toInt() == transcoder.getInputFormat().sampleRate &&
+                            channels == transcoder.getInputFormat().channelNum
+                        ) {
+                            controller.dismiss()
+                            return@Button
+                        }
+                        transcoder.setOutputFormat(sample.toInt(), channels)
+                        transcoder.start()
+                        val progressDialogController = ProgressDialogController(
+                            transcoder.progress,
+                            "audio resampling, please wait",
+                            onSuccess = {
+                                it.dismiss()
+                                controller.dismiss()
+                                viewModel.updateItem()
+                            }
+                        )
+                        dialogManager.show(progressDialogController)
+                    },
                     Modifier
                         .weight(1f)
                         .padding(8.dp, 16.dp, 0.dp, 0.dp)

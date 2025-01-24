@@ -34,19 +34,19 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.syncplayer.LocalDialogManager
 import com.example.syncplayer.R
+import com.example.syncplayer.util.debug
 import kotlinx.coroutines.flow.Flow
 
-class ProgressDialog(
-    val isCancel: Boolean = false,
-    val onSuccess: (ProgressDialog) -> Unit,
-    val progress: Flow<Float>? = null,
+class ProgressDialogController(
+    val progress: Flow<Float>,
     val text: String = "",
+    val onSuccess: (ProgressDialogController) -> Unit,
 ) : DialogController()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProgressDialog(
-    controller: ProgressDialog,
+    controller: ProgressDialogController,
     modifier: Modifier = Modifier
         .fillMaxWidth()
         .background(MaterialTheme.colorScheme.background, RoundedCornerShape(16.dp))
@@ -56,7 +56,7 @@ fun ProgressDialog(
     controller.setDismiss { dialogManager.dismiss(controller) }
     val interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
     Dialog(
-        onDismissRequest = { if (controller.isCancel) controller.dismiss() },
+        onDismissRequest = { controller.dismiss() },
     ) {
         Column(modifier = modifier) {
             LoadingImage(
@@ -64,21 +64,27 @@ fun ProgressDialog(
                     .align(Alignment.CenterHorizontally)
                     .size(44.dp)
             )
+
+            val progress by controller.progress.collectAsState(0f)
+            debug("progress: $progress")
+            if (progress < 0) {
+                controller.onSuccess(controller)
+            }
+            Slider(
+                progress, {},
+                Modifier
+                    .height(16.dp)
+                    .padding(top = 6.dp),
+                thumb = { SliderDefaults.Thumb(interactionSource, thumbSize = DpSize(0.dp, 0.dp)) }
+            )
             if (controller.text.isNotEmpty()) {
                 Text(
                     controller.text,
-                    Modifier.align(Alignment.CenterHorizontally),
+                    Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 12.dp),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
-                )
-            }
-            if (controller.progress != null) {
-                val progress by controller.progress.collectAsState(0f)
-                Slider(
-                    progress,
-                    { if (it == 1f) controller.onSuccess.invoke(controller) },
-                    Modifier.height(16.dp),
-                    thumb = { SliderDefaults.Thumb(interactionSource, thumbSize = DpSize(0.dp, 0.dp)) }
                 )
             }
         }

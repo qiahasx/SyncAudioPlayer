@@ -10,12 +10,12 @@ fun Dialog() {
     val controllers = dialogManager.dialog.collectAsState()
     controllers.value.forEach {
         when (it) {
-            is ProgressDialog -> {
+            is ProgressDialogController -> {
                 ProgressDialog(it)
             }
 
             is AudioInfoDialog -> {
-                AudioInfoDialog(it)
+                AudioResampleDialog(it)
             }
         }
     }

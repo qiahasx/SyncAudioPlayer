@@ -19,6 +19,8 @@ class AudioEncoder(
     private val inputInfo: AudioInfo,
     private val scope: CoroutineScope,
 ) {
+    val sampleTime = MutableStateFlow<Long>(0)
+    private var state = State.Init
     private val codec = MediaCodec.createEncoderByType(inputInfo.mime)
     private val muxer = MediaMuxer(
         inputInfo.filePath.substringBeforeLast(".") + "_${System.currentTimeMillis()}.m4a",
@@ -29,7 +31,6 @@ class AudioEncoder(
     private var processor: PcmBufferProcessor? = null
     private var isEndOfStreamReached = false
     private var isEndOfEncoded = false
-    private val sampleTime = MutableStateFlow<Long>(0)
     private val format = MediaFormat().apply {
         setString(MediaFormat.KEY_MIME, MediaFormat.MIMETYPE_AUDIO_AAC)
         setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectMain)
@@ -58,22 +59,23 @@ class AudioEncoder(
             processor.addReSampler(MonoToStereoReSampler())
         }
         if (targetSampleRate > inputInfo.sampleRate) {
-            processor.addReSampler(SampleRateUpReSampler(targetSampleRate, inputInfo.sampleRate, targetChannelCount))
+            processor.addReSampler(SampleRateUpReSampler(inputInfo.sampleRate, targetSampleRate, targetChannelCount))
         } else if (targetSampleRate < inputInfo.sampleRate) {
-            processor.addReSampler(SampleRateDownReSampler(targetSampleRate, inputInfo.sampleRate, targetChannelCount))
+            processor.addReSampler(SampleRateDownReSampler(inputInfo.sampleRate, targetSampleRate, targetChannelCount))
         }
         codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         codec.start()
         scope.launchIO {
             val start = System.currentTimeMillis()
-            debug("start: ${System.currentTimeMillis() - start}")
             while (!isEndOfEncoded) {
                 submitPcmToCodec()
                 processOutputBuffer()
             }
             debug("end: ${System.currentTimeMillis() - start}")
             release()
+            sampleTime.emit(EOF)
         }
+        state = State.Running
     }
 
     private fun processOutputBuffer() {
@@ -104,16 +106,27 @@ class AudioEncoder(
         val pcmShortInfo = processor.getBuffer(buffer.remaining())
         buffer.put(pcmShortInfo.shorts)
         codec.queueInputBuffer(index, 0, buffer.position() * 2, pcmShortInfo.sampleTime, pcmShortInfo.flags)
-        sampleTime.emit(pcmShortInfo.sampleTime)
         if (pcmShortInfo.flags == MediaCodec.BUFFER_FLAG_END_OF_STREAM) {
             isEndOfStreamReached = true
+        } else {
+            sampleTime.emit(pcmShortInfo.sampleTime)
         }
     }
 
-    private fun release() {
+    fun release() {
+        if (state != State.Running) return
         codec.stop()
         codec.release()
         muxer.stop()
         muxer.release()
+        state = State.End
+    }
+
+    companion object {
+        const val EOF = -1L
+    }
+
+    private enum class State {
+        Init, Running, End
     }
 }

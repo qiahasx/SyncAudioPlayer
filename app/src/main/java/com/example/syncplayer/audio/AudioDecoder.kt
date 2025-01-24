@@ -21,6 +21,7 @@ class AudioDecoder(
     private val decoder: MediaCodec
     private val extractor = MediaExtractor()
     private var decodeJob: Job? = null
+    private var state = State.Init
 
     init {
         extractor.setDataSource(filePath)
@@ -47,6 +48,7 @@ class AudioDecoder(
     fun start() {
         decoder.start()
         startInner()
+        state = State.Running
     }
 
     suspend fun seekTo(timeUs: Long) {
@@ -98,14 +100,23 @@ class AudioDecoder(
     }
 
     fun release() {
-        decodeJob?.cancel()
-        queue.clear()
-        decoder.stop()
-        decoder.release()
-        extractor.release()
+        if (state < State.Running) return
+        scope.launchIO {
+            decodeJob?.cancelAndJoin()
+            queue.clear()
+            decoder.stop()
+            decoder.release()
+            extractor.release()
+            state = State.Init
+        }
     }
 
     companion object {
         const val BUFFER_MAX = 4
+    }
+
+    enum class State {
+        Init,
+        Running,
     }
 }
