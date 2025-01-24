@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,25 +39,32 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.syncplayer.Destinations
+import com.example.syncplayer.LocalDialogManager
 import com.example.syncplayer.LocalMainViewModel
-import com.example.syncplayer.LocalNavController
+import com.example.syncplayer.LocalNavViewModel
 import com.example.syncplayer.LocalPickFile
 import com.example.syncplayer.R
 import com.example.syncplayer.model.AudioItem
+import com.example.syncplayer.ui.dialog.AudioInfoDialog
 import com.example.syncplayer.ui.theme.ComposeTheme
-import com.example.syncplayer.viewModel.MainViewModel
+import com.example.syncplayer.util.launchIO
 
 @Composable
 fun MainLayout() {
     ComposeTheme {
         val snackbarHostState = remember { SnackbarHostState() }
+        val viewModel = LocalMainViewModel.current
         Scaffold(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             topBar = topBar("Pick File"),
             floatingActionButton = addFileButton(),
         ) { innerPadding ->
-            ItemList(innerPadding, snackbarHostState)
+            ItemList(innerPadding)
+        }
+        LaunchedEffect(viewModel) {
+            viewModel.snackbarMessage.collect { message ->
+                snackbarHostState.showSnackbar(message)
+            }
         }
     }
 }
@@ -64,12 +72,11 @@ fun MainLayout() {
 @Composable
 fun ItemList(
     innerPadding: PaddingValues,
-    snackbarHostState: SnackbarHostState,
 ) {
     val viewModel = LocalMainViewModel.current
     val itemList = viewModel.items.collectAsState().value
-    val audioTranscoder = viewModel.audioTranscoders.collectAsState().value
-    val navController = LocalNavController.current
+    val navViewModel = LocalNavViewModel.current
+    val scope = rememberCoroutineScope()
     Column(
         modifier =
         Modifier
@@ -87,7 +94,13 @@ fun ItemList(
         }
         ElevatedButton(
             onClick = {
-                viewModel.onClickStart()
+                if (itemList.isNotEmpty()) {
+                    navViewModel.navPlay()
+                } else {
+                    scope.launchIO {
+                        viewModel.snackbarMessage.emit("请先选择音频文件")
+                    }
+                }
             },
             Modifier
                 .padding(top = 16.dp, bottom = 16.dp)
@@ -96,52 +109,27 @@ fun ItemList(
             Text(text = "start", fontWeight = FontWeight(600), fontSize = 20.sp)
         }
     }
-
-    LaunchedEffect(viewModel) {
-        viewModel.navigationEvent.collect { event ->
-            when (event) {
-                is MainViewModel.NavigationEvent.NavigateToNextScreen -> {
-                    navController.navigate(Destinations.PLAY_ROUTE)
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(viewModel) {
-        viewModel.snackbarMessage.collect { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
-
-    if (audioTranscoder != null) {
-        val format = audioTranscoder.getInputFormat()
-        AudioInfoDialog(
-            format.sampleRate,
-            format.channelNum,
-            { viewModel.releaseAudioTranscoders() }) { sampleRate, channelNum ->
-            audioTranscoder.setOutputFormat(sampleRate, channelNum)
-            viewModel.startAudioTranscoders()
-        }
-    }
 }
 
 @Composable
 fun AudioItem(item: AudioItem) {
     val viewModel = LocalMainViewModel.current
+    val dialogManager = LocalDialogManager.current
     Row(
         Modifier
             .padding(0.dp, 6.dp)
             .fillMaxWidth()
             .background(Color.White, RoundedCornerShape(16.dp))
+            .clickable {
+                dialogManager.show(AudioInfoDialog(item))
+            }
     ) {
         Image(
             painter = painterResource(id = R.drawable.ic_info),
             contentDescription = "",
             Modifier
                 .size(44.dp)
-                .padding(6.dp)
-                .clickable { viewModel.createAudioTranscoders(item) }
-                .padding(6.dp)
+                .padding(12.dp)
         )
         Text(
             item.name,

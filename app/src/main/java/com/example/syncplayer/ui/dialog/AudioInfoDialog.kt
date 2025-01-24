@@ -1,4 +1,4 @@
-package com.example.syncplayer.ui
+package com.example.syncplayer.ui.dialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,20 +27,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.syncplayer.LocalDialogManager
 import com.example.syncplayer.audio.AudioTranscoder
+import com.example.syncplayer.model.AudioItem
+
+class AudioInfoDialog(
+    val audioItem: AudioItem,
+    val isCancel: Boolean = true,
+    val onDismissRequest: (AudioInfoDialog) -> Unit = {},
+) : DialogController()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioInfoDialog(
-    sampleRate: Int,
-    channelNum: AudioTranscoder.Channels,
-    onDismissRequest: () -> Unit,
-    onConfirmation: (Int, AudioTranscoder.Channels) -> Unit,
+    controller: AudioInfoDialog,
 ) {
-    var sample by remember { mutableStateOf("$sampleRate") }
-    var channels by remember { mutableStateOf(channelNum) }
-    val options = listOf("Meno", "Stereo")
-    Dialog(onDismissRequest = { onDismissRequest() }) {
+    val scope = rememberCoroutineScope()
+    val transcoder = remember(controller) { AudioTranscoder(controller.audioItem, scope) }
+    var sample by remember(controller) { mutableStateOf("${transcoder.getInputFormat().sampleRate}") }
+    var channels by remember(controller) { mutableStateOf(transcoder.getInputFormat().channelNum) }
+    val dialogManager = LocalDialogManager.current
+    controller.setDismiss {
+        dialogManager.dismiss(controller)
+        transcoder.release()
+    }
+
+    Dialog(onDismissRequest = { if (controller.isCancel) controller.dismiss() else controller.onDismissRequest(controller) }) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -72,7 +85,7 @@ fun AudioInfoDialog(
                         SegmentedButton(
                             shape = SegmentedButtonDefaults.itemShape(
                                 index = index,
-                                count = options.size
+                                count = AudioTranscoder.Channels.entries.size
                             ),
                             onClick = { channels = AudioTranscoder.Channels.entries[index] },
                             selected = index == channels.ordinal,
@@ -84,7 +97,7 @@ fun AudioInfoDialog(
             Row {
                 OutlinedButton(
                     {
-                        onDismissRequest()
+                        controller.dismiss()
                     },
                     Modifier
                         .weight(1f)
@@ -94,7 +107,7 @@ fun AudioInfoDialog(
                     Text("Cancel")
                 }
                 Button(
-                    { onConfirmation(sample.toInt(), channels) },
+                    {},
                     Modifier
                         .weight(1f)
                         .padding(8.dp, 16.dp, 0.dp, 0.dp)

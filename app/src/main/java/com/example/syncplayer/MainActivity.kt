@@ -12,14 +12,18 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.example.syncplayer.ui.NavGraph
 import com.example.syncplayer.util.debug
 import com.example.syncplayer.util.launchMain
+import com.example.syncplayer.viewModel.DialogManager
 import com.example.syncplayer.viewModel.MainViewModel
 import com.example.syncplayer.viewModel.MainViewModel.Companion.AUDIO_PATH
+import com.example.syncplayer.viewModel.NavViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<MainViewModel>()
+    private val dialogManager by viewModels<DialogManager>()
+    private val navViewModel by viewModels<NavViewModel>()
 
     private val pickFile =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -43,6 +47,8 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(
                 LocalPickFile provides pickFile,
                 LocalMainViewModel provides viewModel,
+                LocalDialogManager provides dialogManager,
+                LocalNavViewModel provides navViewModel,
             ) {
                 NavGraph()
             }
